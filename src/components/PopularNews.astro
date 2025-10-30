@@ -1,0 +1,110 @@
+---
+import { Image } from 'astro:assets';
+// PopularNews component for sidebar
+---
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+	<h3 class="text-xl font-bold text-gray-900 mb-6">Populer</h3>
+	
+	<div class="space-y-5">
+		<!-- Popular Item 1 -->
+		<a href="/berita/saham-alfamart-indomaret-turun" class="block group">
+			<div class="flex gap-4">
+				<div class="flex-shrink-0">
+					<Image 
+						src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=75&fit=crop&crop=face" 
+						alt="Cak Imin" 
+						class="w-20 h-15 rounded-lg object-cover"
+						width={80}
+						height={60}
+					/>
+				</div>
+				<div class="flex-1 min-w-0">
+					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
+						Kemarin 'Disentil' Cak Imin, Saham Alfamart dan Indomaret Turun
+					</h4>
+				</div>
+			</div>
+		</a>
+
+		<!-- Popular Item 2 -->
+		<a href="/berita/wall-street-goyah-fed" class="block group">
+			<div class="flex gap-4">
+				<div class="flex-shrink-0">
+					<Image 
+						src="https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=100&h=75&fit=crop&crop=center" 
+						alt="Wall Street" 
+						class="w-20 h-15 rounded-lg object-cover"
+						width={80}
+						height={60}
+					/>
+				</div>
+				<div class="flex-1 min-w-0">
+					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
+						Wall Street Goyah Setelah The Fed Redam Sinyal Pangkas Suku Bunga
+					</h4>
+				</div>
+			</div>
+		</a>
+
+		<!-- Popular Item 3 -->
+		<a href="/berita/alfamart-cuan-triliunan" class="block group">
+			<div class="flex gap-4">
+				<div class="flex-shrink-0">
+					<Image 
+						src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=100&h=75&fit=crop&crop=center" 
+						alt="Alfamart Store" 
+						class="w-20 h-15 rounded-lg object-cover"
+						width={80}
+						height={60}
+					/>
+				</div>
+				<div class="flex-1 min-w-0">
+					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
+						Disebut 'Pembunuh', Alfamart (AMRT) Sudah Cuan Triliunan
+					</h4>
+				</div>
+			</div>
+		</a>
+
+		<!-- Popular Item 4 -->
+		<a href="/berita/rupiah-menguat-terpeleset" class="block group">
+			<div class="flex gap-4">
+				<div class="flex-shrink-0">
+					<Image 
+						src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=100&h=75&fit=crop&crop=center" 
+						alt="Rupiah Menguat" 
+						class="w-20 h-15 rounded-lg object-cover"
+						width={80}
+						height={60}
+					/>
+				</div>
+				<div class="flex-1 min-w-0">
+					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
+						Rupiah Dibuka Menguat, Tapi Kemudian Terpeleset
+					</h4>
+				</div>
+			</div>
+		</a>
+
+		<!-- Popular Item 5 -->
+		<a href="/berita/bitcoin-stabil-65000" class="block group">
+			<div class="flex gap-4">
+				<div class="flex-shrink-0">
+					<Image 
+						src="https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=100&h=75&fit=crop&crop=center" 
+						alt="Bitcoin Stabil" 
+						class="w-20 h-15 rounded-lg object-cover"
+						width={80}
+						height={60}
+					/>
+				</div>
+				<div class="flex-1 min-w-0">
+					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
+						Bitcoin Stabil di Level $65,000
+					</h4>
+				</div>
+			</div>
+		</a>
+	</div>
+</div>

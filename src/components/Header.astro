@@ -1,0 +1,120 @@
+---
+// Header component untuk blog berita ekonomi dan saham
+---
+
+<header class="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-50 transition-all duration-300">
+  <div class="max-w-7xl mx-auto px-4">
+    <div class="flex items-center justify-between h-16">
+      <!-- Logo dan Brand -->
+      <div class="flex-shrink-0">
+        <a href="/" class="flex items-center gap-3 text-gray-900 hover:scale-105 transition-transform duration-200">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="url(#gradient)"/>
+            <path d="M8 12h16v2H8v-2zm0 4h16v2H8v-2zm0 4h12v2H8v-2z" fill="white"/>
+            <defs>
+              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <span class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
+            SansStocks
+          </span>
+        </a>
+      </div>
+
+      <!-- Navigation Menu -->
+      <nav class="hidden md:flex items-center">
+        <ul class="flex space-x-8">
+          <li>
+            <a href="/" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 relative transition-colors duration-200 after:absolute after:bottom-[-1rem] after:left-0 after:right-0 after:h-0.5 after:bg-gradient-to-r after:from-blue-600 after:to-blue-700 after:rounded-sm">
+              Beranda
+            </a>
+          </li>
+          <li>
+            <a href="/ekonomi" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+              Ekonomi
+            </a>
+          </li>
+          <li>
+            <a href="/saham" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+              Saham
+            </a>
+          </li>
+          <li>
+            <a href="/pasar" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+              Pasar
+            </a>
+          </li>
+          <li>
+            <a href="/analisis" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+              Analisis
+            </a>
+          </li>
+          <li>
+            <a href="/kripto" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+              Kripto
+            </a>
+          </li>
+          <li>
+            <a href="/artikel" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+              Artikel
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Search dan Actions -->
+      <div class="flex items-center space-x-4">
+        <!-- Search Box -->
+        <div class="hidden sm:block relative">
+          <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input 
+            type="text" 
+            placeholder="Cari berita..." 
+            class="pl-10 pr-4 py-2 w-48 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
+          >
+        </div>
+        
+
+        <!-- Mobile Menu Toggle -->
+        <button class="md:hidden flex flex-col space-y-1 p-2" aria-label="Toggle mobile menu">
+          <span class="w-6 h-0.5 bg-gray-700 transition-all duration-300"></span>
+          <span class="w-6 h-0.5 bg-gray-700 transition-all duration-300"></span>
+          <span class="w-6 h-0.5 bg-gray-700 transition-all duration-300"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile Menu (akan ditambahkan nanti) -->
+<div class="md:hidden bg-white border-b border-gray-200 hidden" id="mobile-menu">
+  <div class="px-4 py-2 space-y-1">
+    <a href="/" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Beranda</a>
+    <a href="/ekonomi" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Ekonomi</a>
+    <a href="/saham" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Saham</a>
+    <a href="/pasar" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Pasar</a>
+    <a href="/analisis" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Analisis</a>
+    <a href="/kripto" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Kripto</a>
+    <a href="/artikel" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Artikel</a>
+  </div>
+</div>
+
+<script>
+  // Mobile menu toggle functionality
+  document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuToggle = document.querySelector('[aria-label="Toggle mobile menu"]');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    if (mobileMenuToggle && mobileMenu) {
+      mobileMenuToggle.addEventListener('click', function() {
+        mobileMenu.classList.toggle('hidden');
+      });
+    }
+  });
+</script>

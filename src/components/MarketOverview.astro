@@ -1,0 +1,52 @@
+---
+import MarketCard from './MarketCard.astro';
+---
+
+<section class="mb-16">
+	<div class="flex items-center justify-between mb-8">
+		<h2 class="text-3xl font-bold text-gray-900">Ringkasan Pasar</h2>
+		<a href="/pasar" class="text-blue-600 hover:text-blue-700 font-medium flex items-center group">
+			Lihat Detail
+			<svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+			</svg>
+		</a>
+	</div>
+	<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+		<MarketCard
+			name="IHSG"
+			value="7,234.56"
+			change="+1.2%"
+			changeType="positive"
+			iconColor="text-green-600"
+			iconBgColor="bg-green-100"
+		/>
+
+		<MarketCard
+			name="USD/IDR"
+			value="15,420"
+			change="-0.3%"
+			changeType="negative"
+			iconColor="text-red-600"
+			iconBgColor="bg-red-100"
+		/>
+
+		<MarketCard
+			name="Bitcoin"
+			value="$65,234"
+			change="+2.1%"
+			changeType="positive"
+			iconColor="text-orange-600"
+			iconBgColor="bg-orange-100"
+		/>
+
+		<MarketCard
+			name="Emas"
+			value="$2,045"
+			change="+0.8%"
+			changeType="positive"
+			iconColor="text-yellow-600"
+			iconBgColor="bg-yellow-100"
+		/>
+	</div>
+</section>

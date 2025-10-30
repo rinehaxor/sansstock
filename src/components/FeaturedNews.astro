@@ -1,0 +1,49 @@
+---
+import ArticleCardShadcn from './ArticleCardShadcn';
+---
+
+<section class="mb-16">
+	
+	<div class="grid lg:grid-cols-3 gap-6">
+		<!-- Featured Article -->
+		<ArticleCardShadcn
+			title="Bank Indonesia Pertahankan Suku Bunga Acuan di 6%"
+			excerpt="BI memutuskan untuk mempertahankan BI 7-Day Reverse Repo Rate di level 6% untuk periode November 2024. Keputusan ini diambil setelah mempertimbangkan berbagai faktor ekonomi makro..."
+			category="Ekonomi"
+			categoryColor="from-blue-500 to-blue-600"
+			timeAgo="2 jam yang lalu"
+			author="Tim Editorial"
+			authorInitials="TE"
+			link="/berita/bank-indonesia-suku-bunga"
+			isLarge={true}
+			client:load
+		/>
+
+		<!-- Side Articles -->
+		<div class="grid grid-cols-1 gap-6">
+			<ArticleCardShadcn
+				title="IHSG Menguat 0.8% di Sesi Pagi"
+				excerpt="Indeks Harga Saham Gabungan (IHSG) menguat 0.8% pada sesi pagi didukung oleh sentimen positif dari pasar global..."
+				category="Saham"
+				categoryColor="from-green-500 to-green-600"
+				timeAgo="4 jam yang lalu"
+				author="Analis Pasar"
+				authorInitials="AP"
+				link="/berita/ihsg-menguat"
+				client:load
+			/>
+
+			<ArticleCardShadcn
+				title="Bitcoin Stabil di Level $65,000"
+				excerpt="Harga Bitcoin tetap stabil di kisaran $65,000 dengan volume perdagangan yang meningkat signifikan..."
+				category="Kripto"
+				categoryColor="from-purple-500 to-purple-600"
+				timeAgo="6 jam yang lalu"
+				author="Kripto Expert"
+				authorInitials="KE"
+				link="/berita/bitcoin-stabil"
+				client:load
+			/>
+		</div>
+	</div>
+</section>
