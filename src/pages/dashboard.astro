@@ -1,16 +1,45 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import { supabase } from '../../db/supabase.js';
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../db/supabase';
 
-// Check if user is authenticated
-const { data: { user }, error } = await supabase.auth.getUser();
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
 
-if (error || !user) {
-	return Astro.redirect('/portal/access');
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
 }
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', {
+      path: '/',
+    });
+    Astro.cookies.delete('sb-refresh-token', {
+      path: '/',
+    });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', {
+    path: '/',
+  });
+  Astro.cookies.delete('sb-refresh-token', {
+    path: '/',
+  });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
 ---
 
-<Layout>
+<Layout title="Dashboard">
 	<div class="min-h-screen bg-gray-50">
 		<!-- Header -->
 		<header class="bg-white shadow-sm border-b border-gray-200">
@@ -20,13 +49,15 @@ if (error || !user) {
 						<h1 class="text-2xl font-bold text-gray-900">SansStocks Dashboard</h1>
 					</div>
 					<div class="flex items-center space-x-4">
-						<span class="text-sm text-gray-600">Welcome, {user.email}</span>
-						<button 
-							id="logoutBtn"
-							class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-						>
-							Logout
-						</button>
+						<span class="text-sm text-gray-600">Welcome, {email}</span>
+						<form action="/api/auth/signout">
+							<button 
+								type="submit"
+								class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+							>
+								Sign out
+							</button>
+						</form>
 					</div>
 				</div>
 			</div>
@@ -121,16 +152,4 @@ if (error || !user) {
 		</main>
 	</div>
 
-	<script>
-		import { supabase } from '../../db/supabase.js';
-
-		document.getElementById('logoutBtn').addEventListener('click', async () => {
-			const { error } = await supabase.auth.signOut();
-			if (error) {
-				console.error('Error signing out:', error);
-			} else {
-				window.location.href = '/portal/access';
-			}
-		});
-	</script>
 </Layout>
