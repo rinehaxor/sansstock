@@ -1,110 +1,73 @@
 ---
-import { Image } from 'astro:assets';
-// PopularNews component for sidebar
+import { supabase } from '../db/supabase';
+
+// Fetch popular articles (most recent published, limit 5)
+const { data: popularArticles } = await supabase
+   .from('articles')
+   .select(`
+      id,
+      title,
+      slug,
+      thumbnail_url,
+      published_at
+   `)
+   .eq('status', 'published')
+   .order('published_at', { ascending: false })
+   .limit(5);
+
+// Helper function to format time ago
+function getTimeAgo(dateString: string): string {
+   const date = new Date(dateString);
+   const now = new Date();
+   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+   if (diffInSeconds < 60) return 'Baru saja';
+   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit yang lalu`;
+   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam yang lalu`;
+   if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} hari yang lalu`;
+   return date.toLocaleDateString('id-ID');
+}
 ---
 
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
 	<h3 class="text-xl font-bold text-gray-900 mb-6">Populer</h3>
 	
-	<div class="space-y-5">
-		<!-- Popular Item 1 -->
-		<a href="/berita/saham-alfamart-indomaret-turun" class="block group">
-			<div class="flex gap-4">
-				<div class="flex-shrink-0">
-					<Image 
-						src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=75&fit=crop&crop=face" 
-						alt="Cak Imin" 
-						class="w-20 h-15 rounded-lg object-cover"
-						width={80}
-						height={60}
-					/>
-				</div>
-				<div class="flex-1 min-w-0">
-					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
-						Kemarin 'Disentil' Cak Imin, Saham Alfamart dan Indomaret Turun
-					</h4>
-				</div>
-			</div>
-		</a>
-
-		<!-- Popular Item 2 -->
-		<a href="/berita/wall-street-goyah-fed" class="block group">
-			<div class="flex gap-4">
-				<div class="flex-shrink-0">
-					<Image 
-						src="https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=100&h=75&fit=crop&crop=center" 
-						alt="Wall Street" 
-						class="w-20 h-15 rounded-lg object-cover"
-						width={80}
-						height={60}
-					/>
-				</div>
-				<div class="flex-1 min-w-0">
-					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
-						Wall Street Goyah Setelah The Fed Redam Sinyal Pangkas Suku Bunga
-					</h4>
-				</div>
-			</div>
-		</a>
-
-		<!-- Popular Item 3 -->
-		<a href="/berita/alfamart-cuan-triliunan" class="block group">
-			<div class="flex gap-4">
-				<div class="flex-shrink-0">
-					<Image 
-						src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=100&h=75&fit=crop&crop=center" 
-						alt="Alfamart Store" 
-						class="w-20 h-15 rounded-lg object-cover"
-						width={80}
-						height={60}
-					/>
-				</div>
-				<div class="flex-1 min-w-0">
-					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
-						Disebut 'Pembunuh', Alfamart (AMRT) Sudah Cuan Triliunan
-					</h4>
-				</div>
-			</div>
-		</a>
-
-		<!-- Popular Item 4 -->
-		<a href="/berita/rupiah-menguat-terpeleset" class="block group">
-			<div class="flex gap-4">
-				<div class="flex-shrink-0">
-					<Image 
-						src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=100&h=75&fit=crop&crop=center" 
-						alt="Rupiah Menguat" 
-						class="w-20 h-15 rounded-lg object-cover"
-						width={80}
-						height={60}
-					/>
-				</div>
-				<div class="flex-1 min-w-0">
-					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
-						Rupiah Dibuka Menguat, Tapi Kemudian Terpeleset
-					</h4>
-				</div>
-			</div>
-		</a>
-
-		<!-- Popular Item 5 -->
-		<a href="/berita/bitcoin-stabil-65000" class="block group">
-			<div class="flex gap-4">
-				<div class="flex-shrink-0">
-					<Image 
-						src="https://images.unsplash.com/photo-1621761191319-c6fb62004040?w=100&h=75&fit=crop&crop=center" 
-						alt="Bitcoin Stabil" 
-						class="w-20 h-15 rounded-lg object-cover"
-						width={80}
-						height={60}
-					/>
-				</div>
-				<div class="flex-1 min-w-0">
-					<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
-						Bitcoin Stabil di Level $65,000
-					</h4>
-				</div>
-			</div>
-		</a>
-	</div>
+	{popularArticles && popularArticles.length > 0 ? (
+		<div class="space-y-5">
+			{popularArticles.map((article: any) => (
+				<a href={`/artikel/${article.slug}`} class="block group">
+					<div class="flex gap-4">
+						{article.thumbnail_url ? (
+							<div class="flex-shrink-0">
+								<img 
+									src={article.thumbnail_url} 
+									alt={article.title}
+									class="w-20 h-15 rounded-lg object-cover"
+									loading="lazy"
+								/>
+							</div>
+						) : (
+							<div class="flex-shrink-0 w-20 h-15 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+								<svg class="w-8 h-8 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+								</svg>
+							</div>
+						)}
+						<div class="flex-1 min-w-0">
+							<h4 class="text-base font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
+								{article.title}
+							</h4>
+							{article.published_at && (
+								<p class="text-xs text-gray-500 mt-1">
+									{getTimeAgo(article.published_at)}
+								</p>
+							)}
+						</div>
+					</div>
+				</a>
+			))}
+		</div>
+	) : (
+		<p class="text-sm text-gray-500">Belum ada artikel populer.</p>
+	)}
 </div>

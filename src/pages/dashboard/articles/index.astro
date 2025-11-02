@@ -1,0 +1,256 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../db/supabase';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+// Fetch articles with pagination
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 10;
+const statusFilter = Astro.url.searchParams.get('status') || 'all';
+
+let query = supabase
+  .from('articles')
+  .select(`
+    id,
+    title,
+    slug,
+    summary,
+    status,
+    published_at,
+    created_at,
+    categories:category_id (
+      id,
+      name
+    )
+  `, { count: 'exact' })
+  .order('created_at', { ascending: false })
+  .range((page - 1) * limit, page * limit - 1);
+
+if (statusFilter !== 'all') {
+  query = query.eq('status', statusFilter);
+}
+
+const { data: articles, error, count } = await query;
+
+// Get categories for filter
+const { data: categories } = await supabase
+  .from('categories')
+  .select('id, name')
+  .order('name');
+---
+
+<AdminLayout title="Artikel" email={email}>
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Header -->
+		<div class="mb-8">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-3xl font-bold text-gray-900">Kelola Artikel</h1>
+					<p class="mt-2 text-sm text-gray-600">Buat, edit, dan kelola artikel Anda</p>
+				</div>
+				<a 
+					href="/dashboard/articles/new"
+					class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+				>
+					<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+					</svg>
+					Artikel Baru
+				</a>
+			</div>
+		</div>
+
+		<!-- Filters -->
+		<div class="mb-6 flex gap-4 items-center">
+			<div class="flex gap-2">
+				<a 
+					href="?status=all&page=1"
+					class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+						statusFilter === 'all' 
+							? 'bg-blue-100 text-blue-700' 
+							: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+					}`}
+				>
+					Semua
+				</a>
+				<a 
+					href="?status=published&page=1"
+					class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+						statusFilter === 'published' 
+							? 'bg-green-100 text-green-700' 
+							: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+					}`}
+				>
+					Published
+				</a>
+				<a 
+					href="?status=draft&page=1"
+					class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+						statusFilter === 'draft' 
+							? 'bg-yellow-100 text-yellow-700' 
+							: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+					}`}
+				>
+					Draft
+				</a>
+			</div>
+		</div>
+
+		<!-- Articles Table -->
+		<div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+			<table class="min-w-full divide-y divide-gray-200">
+				<thead class="bg-gray-50">
+					<tr>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul</th>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+						<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+						<th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+					</tr>
+				</thead>
+				<tbody class="bg-white divide-y divide-gray-200">
+					{articles && articles.length > 0 ? (
+						articles.map((article) => (
+							<tr class="hover:bg-gray-50">
+								<td class="px-6 py-4 whitespace-nowrap">
+									<div class="text-sm font-medium text-gray-900">{article.title}</div>
+									<div class="text-sm text-gray-500">{article.slug}</div>
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap">
+									<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+										{article.categories?.name || '-'}
+									</span>
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap">
+									<span class={`px-2 py-1 text-xs font-medium rounded ${
+										article.status === 'published' 
+											? 'bg-green-100 text-green-800' 
+											: article.status === 'draft'
+											? 'bg-yellow-100 text-yellow-800'
+											: 'bg-gray-100 text-gray-800'
+									}`}>
+										{article.status}
+									</span>
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+									{article.published_at 
+										? new Date(article.published_at).toLocaleDateString('id-ID')
+										: new Date(article.created_at).toLocaleDateString('id-ID')
+									}
+								</td>
+								<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+									<div class="flex items-center justify-end gap-2">
+										<a 
+											href={`/dashboard/articles/${article.id}/edit`}
+											class="text-blue-600 hover:text-blue-900"
+										>
+											Edit
+										</a>
+										<button 
+											onclick={`deleteArticle(${article.id})`}
+											class="text-red-600 hover:text-red-900"
+										>
+											Delete
+										</button>
+									</div>
+								</td>
+							</tr>
+						))
+					) : (
+						<tr>
+							<td colspan="5" class="px-6 py-8 text-center text-sm text-gray-500">
+								Belum ada artikel. <a href="/dashboard/articles/new" class="text-blue-600 hover:text-blue-700">Buat artikel pertama</a>
+							</td>
+						</tr>
+					)}
+				</tbody>
+			</table>
+		</div>
+
+		<!-- Pagination -->
+		{count && count > limit && (
+			<div class="mt-6 flex items-center justify-between">
+				<div class="text-sm text-gray-700">
+					Menampilkan {((page - 1) * limit) + 1} sampai {Math.min(page * limit, count)} dari {count} artikel
+				</div>
+				<div class="flex gap-2">
+					{page > 1 && (
+						<a 
+							href={`?status=${statusFilter}&page=${page - 1}`}
+							class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+						>
+							Sebelumnya
+						</a>
+					)}
+					{count && page * limit < count && (
+						<a 
+							href={`?status=${statusFilter}&page=${page + 1}`}
+							class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+						>
+							Selanjutnya
+						</a>
+					)}
+				</div>
+			</div>
+		)}
+	</div>
+
+	<script>
+		async function deleteArticle(id: number) {
+			if (!confirm('Apakah Anda yakin ingin menghapus artikel ini?')) {
+				return;
+			}
+
+			try {
+				const response = await fetch(`/api/articles/${id}`, {
+					method: 'DELETE',
+					credentials: 'include',
+				});
+
+				if (response.ok) {
+					alert('Artikel berhasil dihapus');
+					window.location.reload();
+				} else {
+					const error = await response.json();
+					alert('Error: ' + (error.error || 'Gagal menghapus artikel'));
+				}
+			} catch (error) {
+				alert('Error: Gagal menghapus artikel');
+			}
+		}
+
+		// Make deleteArticle available globally
+		(window as any).deleteArticle = deleteArticle;
+	</script>
+</AdminLayout>
+
+

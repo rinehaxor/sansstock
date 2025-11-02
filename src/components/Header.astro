@@ -1,5 +1,7 @@
 ---
 // Header component untuk blog berita ekonomi dan saham
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.png';
 ---
 
 <header class="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-50 transition-all duration-300">
@@ -8,19 +10,8 @@
       <!-- Logo dan Brand -->
       <div class="flex-shrink-0">
         <a href="/" class="flex items-center gap-3 text-gray-900 hover:scale-105 transition-transform duration-200">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="8" fill="url(#gradient)"/>
-            <path d="M8 12h16v2H8v-2zm0 4h16v2H8v-2zm0 4h12v2H8v-2z" fill="white"/>
-            <defs>
-              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
-              </linearGradient>
-            </defs>
-          </svg>
-          <span class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
-            SansStocks
-          </span>
+          <Image src={logo} alt="SansStocks Logo" width={140} height={120} format="webp" class="object-contain" />
+        
         </a>
       </div>
 

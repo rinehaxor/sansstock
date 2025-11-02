@@ -43,8 +43,15 @@ export default function LoginForm() {
             throw new Error(errorMessage);
          }
 
+         const result = await response.json();
+
          // Redirect ke dashboard setelah berhasil
-         window.location.href = '/dashboard';
+         // Gunakan replace untuk menghindari back button ke login page
+         if (result.success && result.redirect) {
+            window.location.replace(result.redirect);
+         } else {
+            window.location.replace('/dashboard');
+         }
       } catch (err) {
          setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat login');
          setIsSubmitting(false);

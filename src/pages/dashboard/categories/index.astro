@@ -1,0 +1,90 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../db/supabase';
+import CategoriesTable from '../../../components/CategoriesTable';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+// Fetch categories
+const { data: categories, error } = await supabase
+  .from('categories')
+  .select('id, name, slug, description, created_at, updated_at')
+  .order('name', { ascending: true });
+
+// Get category usage count (how many articles use each category)
+const categoryIds = categories?.map((c: any) => c.id) || [];
+let categoryUsage: Record<number, number> = {};
+
+if (categoryIds.length > 0) {
+  const { data: articles } = await supabase
+    .from('articles')
+    .select('category_id');
+  
+  if (articles) {
+    articles.forEach((article: any) => {
+      if (article.category_id) {
+        categoryUsage[article.category_id] = (categoryUsage[article.category_id] || 0) + 1;
+      }
+    });
+  }
+}
+---
+
+<AdminLayout title="Categories" email={email}>
+	<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Header -->
+		<div class="mb-8">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-3xl font-bold text-gray-900">Kelola Kategori</h1>
+					<p class="mt-2 text-sm text-gray-600">Buat dan kelola kategori untuk artikel</p>
+				</div>
+				<a 
+					href="/dashboard/categories/new"
+					class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+				>
+					<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+					</svg>
+					Kategori Baru
+				</a>
+			</div>
+		</div>
+
+		<!-- Categories Table -->
+		<CategoriesTable 
+			client:load
+			categories={JSON.stringify(categories || [])} 
+			categoryUsage={JSON.stringify(categoryUsage)}
+		/>
+	</div>
+</AdminLayout>
+

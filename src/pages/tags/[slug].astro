@@ -1,0 +1,125 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { supabase } from '../../db/supabase';
+import PopularNews from '../../components/PopularNews.astro';
+import ArticleCardShadcn from '../../components/ArticleCardShadcn';
+
+const { slug } = Astro.params;
+
+// Fetch tag by slug
+const { data: tag, error: tagError } = await supabase
+   .from('tags')
+   .select('id, name, slug, description')
+   .eq('slug', slug)
+   .single();
+
+if (tagError || !tag) {
+   return new Response('Tag not found', { status: 404 });
+}
+
+// Fetch published articles with this tag
+// First, get article_ids from article_tags
+const { data: articleTags } = await supabase
+   .from('article_tags')
+   .select('article_id')
+   .eq('tag_id', tag.id);
+
+const articleIds = articleTags?.map((at: any) => at.article_id) || [];
+
+// Then fetch articles
+let articles: any[] = [];
+if (articleIds.length > 0) {
+   const { data: articlesData } = await supabase
+      .from('articles')
+      .select(`
+         id,
+         title,
+         slug,
+         summary,
+         thumbnail_url,
+         published_at,
+         created_at,
+         category_id,
+         categories(name, slug)
+      `)
+      .eq('status', 'published')
+      .in('id', articleIds)
+      .order('published_at', { ascending: false })
+      .limit(20);
+   
+   articles = articlesData || [];
+}
+
+// Helper function to format time ago
+function getTimeAgo(dateString: string): string {
+   const date = new Date(dateString);
+   const now = new Date();
+   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+   if (diffInSeconds < 60) return 'Baru saja';
+   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit yang lalu`;
+   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam yang lalu`;
+   if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} hari yang lalu`;
+   return date.toLocaleDateString('id-ID');
+}
+---
+
+<Layout>
+   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <!-- Tag Header -->
+      <div class="mb-8">
+         <h1 class="text-4xl font-bold text-gray-900 mb-4">{tag.name}</h1>
+         {tag.description && (
+            <p class="text-lg text-gray-600">{tag.description}</p>
+         )}
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+         <!-- Main Articles List -->
+         <div class="lg:col-span-2">
+            {articles && articles.length > 0 ? (
+               <div class="grid lg:grid-cols-3 gap-6">
+                  {articles.map((article: any, index: number) => (
+                     <ArticleCardShadcn
+                        title={article.title}
+                        excerpt={article.summary || ''}
+                        category={article.categories?.name || 'Artikel'}
+                        categoryColor="from-blue-500 to-blue-600"
+                        timeAgo={getTimeAgo(article.published_at || article.created_at)}
+                        author="Tim Editorial"
+                        authorInitials="TE"
+                        link={`/artikel/${article.slug}`}
+                        isLarge={index === 0}
+                        client:load
+                     />
+                  ))}
+               </div>
+            ) : (
+               <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                  <p class="text-gray-500 text-lg">Belum ada artikel dengan tag ini.</p>
+               </div>
+            )}
+         </div>
+
+         <!-- Sidebar -->
+         <div class="lg:col-span-1">
+            <!-- Popular News Widget -->
+            <PopularNews />
+
+            <!-- Tag Info -->
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-6 mt-6">
+               <h4 class="text-lg font-bold text-gray-900 mb-2">Tentang Tag</h4>
+               <p class="text-sm text-gray-700 mb-4">
+                  {tag.description || `Semua artikel dengan tag ${tag.name}.`}
+               </p>
+               <div class="text-xs text-gray-600">
+                  <p class="font-medium">{articles?.length || 0} artikel</p>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</Layout>
+

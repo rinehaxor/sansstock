@@ -1,5 +1,7 @@
 ---
 // Footer component
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.png';
 ---
 
 <footer class="bg-gray-900 text-white">
@@ -9,11 +11,7 @@
 			<!-- Company Info -->
 			<div class="lg:col-span-1">
 				<div class="flex items-center mb-4">
-					<div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-						<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-							<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-						</svg>
-					</div>
+					<Image src={logo} alt="SansStocks Logo" width={32} height={32} format="webp" class="object-contain mr-3" />
 					<h3 class="text-xl font-bold">SansStocks</h3>
 				</div>
 				<p class="text-gray-400 text-sm leading-relaxed mb-4">
