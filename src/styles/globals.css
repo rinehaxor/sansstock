@@ -103,3 +103,23 @@ body {
 .text-foreground {
    color: hsl(var(--foreground));
 }
+
+.bg-popover {
+   background-color: hsl(var(--popover));
+}
+
+.text-popover-foreground {
+   color: hsl(var(--popover-foreground));
+}
+
+.bg-accent {
+   background-color: hsl(var(--accent));
+}
+
+.text-accent-foreground {
+   color: hsl(var(--accent-foreground));
+}
+
+.bg-background {
+   background-color: hsl(var(--background));
+}

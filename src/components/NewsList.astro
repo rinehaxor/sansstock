@@ -1,8 +1,58 @@
 ---
-import ArticleCardShadcn from './ArticleCardShadcn';
+import { supabase } from '../db/supabase';
 import PopularNews from './PopularNews.astro';
 import AdsWidget from './AdsWidget.astro';
-import { Image } from 'astro:assets';
+
+// Fetch published articles
+const { data: articles, error } = await supabase
+  .from('articles')
+  .select(`
+    id,
+    title,
+    slug,
+    summary,
+    thumbnail_url,
+    published_at,
+    created_at,
+    categories:category_id (
+      id,
+      name,
+      slug
+    )
+  `)
+  .eq('status', 'published')
+  .order('published_at', { ascending: false })
+  .limit(4);
+
+// Helper function untuk format waktu relatif
+function getTimeAgo(dateString: string | null): string {
+  if (!dateString) return 'Baru saja';
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return 'Baru saja';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit yang lalu`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam yang lalu`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} hari yang lalu`;
+  if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)} minggu yang lalu`;
+  return `${Math.floor(diffInSeconds / 2592000)} bulan yang lalu`;
+}
+
+// Helper function untuk get category color
+function getCategoryColor(categoryName: string): string {
+  const colors: Record<string, string> = {
+    'Ekonomi': 'from-blue-500 to-blue-600',
+    'Saham': 'from-green-500 to-green-600',
+    'Kripto': 'from-purple-500 to-purple-600',
+    'Market': 'from-orange-500 to-orange-600',
+    'Energi': 'from-yellow-500 to-yellow-600',
+    'Sektor Riil': 'from-red-500 to-red-600',
+    'Gaya Hidup': 'from-pink-500 to-pink-600',
+  };
+  return colors[categoryName] || 'from-gray-500 to-gray-600';
+}
 ---
 
 <section class="mb-16">
@@ -20,109 +70,47 @@ import { Image } from 'astro:assets';
 		<!-- Main News Content -->
 		<div class="lg:col-span-2">
 			<div class="space-y-6">
-				<!-- News Item 1 -->
-				<article class="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-					<a href="/berita/bgn-kolaborasi-india" class="flex gap-6">
-						<div class="flex-shrink-0">
-							<Image 
-								src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=120&fit=crop&crop=center" 
-								alt="BGN Kolaborasi India" 
-								class="w-48 h-28 rounded-lg object-cover"
-								width={192}
-								height={112}
-							/>
-						</div>
-						<div class="flex-1 min-w-0">
-							<h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">
-								BGN Kolaborasi dengan India, Naikkan Kualitas Makan Bergizi
-							</h3>
-							<p class="text-sm text-gray-600 mb-3 line-clamp-2">
-								BGN melakukan kolaborasi strategis dengan India untuk meningkatkan kualitas makanan bergizi melalui program inovasi pangan...
-							</p>
-							<p class="text-sm text-blue-600 font-medium">
-								Gaya Hidup | 4 menit yang lalu
-							</p>
-						</div>
-					</a>
-				</article>
-
-				<!-- News Item 2 -->
-				<article class="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-					<a href="/berita/motor-brebet-jatim" class="flex gap-6">
-						<div class="flex-shrink-0">
-							<Image 
-								src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=200&h=120&fit=crop&crop=center" 
-								alt="Motor Brebet Jatim" 
-								class="w-48 h-28 rounded-lg object-cover"
-								width={192}
-								height={112}
-							/>
-						</div>
-						<div class="flex-1 min-w-0">
-							<h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">
-								Soal Motor Brebet di Jatim: Tak Ada Campuran Air pada Pertalite
-							</h3>
-							<p class="text-sm text-gray-600 mb-3 line-clamp-2">
-								Pertamina memastikan tidak ada campuran air pada bahan bakar Pertalite di Jawa Timur setelah laporan motor brebet...
-							</p>
-							<p class="text-sm text-blue-600 font-medium">
-								Energi | 14 menit yang lalu
-							</p>
-						</div>
-					</a>
-				</article>
-
-				<!-- News Item 3 -->
-				<article class="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-					<a href="/berita/ihsg-menguat-fed" class="flex gap-6">
-						<div class="flex-shrink-0">
-							<Image 
-								src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=200&h=120&fit=crop&crop=center" 
-								alt="IHSG Menguat" 
-								class="w-48 h-28 rounded-lg object-cover"
-								width={192}
-								height={112}
-							/>
-						</div>
-						<div class="flex-1 min-w-0">
-							<h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">
-								IHSG Dibuka Menguat Dipicu Euforia The Fed Pangkas Bunga
-							</h3>
-							<p class="text-sm text-gray-600 mb-3 line-clamp-2">
-								Indeks Harga Saham Gabungan (IHSG) dibuka menguat didorong oleh euforia The Fed yang memangkas suku bunga...
-							</p>
-							<p class="text-sm text-blue-600 font-medium">
-								Market | 22 menit yang lalu
-							</p>
-						</div>
-					</a>
-				</article>
-
-				<!-- News Item 4 -->
-				<article class="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-					<a href="/berita/peritel-lawan-cak-imin" class="flex gap-6">
-						<div class="flex-shrink-0">
-							<Image 
-								src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&h=120&fit=crop&crop=center" 
-								alt="Peritel Lawan Cak Imin" 
-								class="w-48 h-28 rounded-lg object-cover"
-								width={192}
-								height={112}
-							/>
-						</div>
-						<div class="flex-1 min-w-0">
-							<h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">
-								Ramai-ramai Peritel Lawan Cak Imin soal Alfamart Cs Pembunuh UMKM
-							</h3>
-							<p class="text-sm text-gray-600 mb-3 line-clamp-2">
-								Sejumlah peritel bersatu melawan Cak Imin terkait pernyataan bahwa Alfamart dan sejenisnya membunuh UMKM...
-							</p>
-							<p class="text-sm text-blue-600 font-medium">
-								Sektor Riil | 24 menit yang lalu
-							</p>
-						</div>
-					</a>
-				</article>
+				{articles && articles.length > 0 ? (
+					articles.map((article: any) => {
+						const category = article.categories?.name || 'Umum';
+						const categoryColor = getCategoryColor(category);
+						const timeAgo = getTimeAgo(article.published_at || article.created_at);
+						const articleUrl = `/artikel/${article.slug}`;
+						const thumbnailUrl = article.thumbnail_url || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=200&h=120&fit=crop&crop=center';
+						
+						return (
+							<article class="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
+								<a href={articleUrl} class="flex gap-6">
+									<div class="flex-shrink-0">
+										<img 
+											src={thumbnailUrl} 
+											alt={article.title} 
+											class="w-48 h-28 rounded-lg object-cover"
+											loading="lazy"
+											onerror="this.src='https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=200&h=120&fit=crop&crop=center'"
+										/>
+									</div>
+									<div class="flex-1 min-w-0">
+										<h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">
+											{article.title}
+										</h3>
+										<p class="text-sm text-gray-600 mb-3 line-clamp-2">
+											{article.summary || 'Tidak ada ringkasan tersedia...'}
+										</p>
+										<p class="text-sm text-blue-600 font-medium">
+											{category} | {timeAgo}
+										</p>
+									</div>
+								</a>
+							</article>
+						);
+					})
+				) : (
+					<div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+						<p class="text-gray-500 text-lg">Belum ada artikel yang diterbitkan.</p>
+						<p class="text-gray-400 text-sm mt-2">Silakan publikasikan artikel dari dashboard admin.</p>
+					</div>
+				)}
 			</div>
 		</div>
 		

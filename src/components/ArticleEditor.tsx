@@ -6,14 +6,7 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import { Dropcursor } from '@tiptap/extension-dropcursor';
 import MenuBar from './MenuBar';
-import {
-   Dialog,
-   DialogContent,
-   DialogDescription,
-   DialogFooter,
-   DialogHeader,
-   DialogTitle,
-} from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
 
@@ -24,18 +17,14 @@ interface ArticleEditorProps {
    className?: string;
 }
 
-export default function ArticleEditor({
-   content = '',
-   onChange,
-   placeholder = 'Mulai menulis artikel Anda di sini...',
-   className = '',
-   id,
-}: ArticleEditorProps) {
+export default function ArticleEditor({ content = '', onChange, placeholder = 'Mulai menulis artikel Anda di sini...', className = '', id }: ArticleEditorProps) {
    const [showImageDialog, setShowImageDialog] = useState(false);
+   const [isEditingImage, setIsEditingImage] = useState(false);
    const [imageUrl, setImageUrl] = useState('');
    const [imageFile, setImageFile] = useState<File | null>(null);
    const [imagePreview, setImagePreview] = useState<string>('');
    const [imageUploadMethod, setImageUploadMethod] = useState<'url' | 'file'>('url');
+   const [imageAlt, setImageAlt] = useState('');
    const [showLinkDialog, setShowLinkDialog] = useState(false);
    const [linkUrl, setLinkUrl] = useState('');
    const [linkText, setLinkText] = useState('');
@@ -76,6 +65,18 @@ export default function ArticleEditor({
             addAttributes() {
                return {
                   ...this.parent?.(),
+                  alt: {
+                     default: null,
+                     parseHTML: (element) => element.getAttribute('alt'),
+                     renderHTML: (attributes) => {
+                        if (!attributes.alt) {
+                           return {};
+                        }
+                        return {
+                           alt: attributes.alt,
+                        };
+                     },
+                  },
                   'data-align': {
                      default: null,
                      parseHTML: (element) => element.getAttribute('data-align'),
@@ -113,7 +114,7 @@ export default function ArticleEditor({
                const { state } = view;
                const { selection } = state;
                const node = state.doc.nodeAt(selection.from);
-               
+
                if (node?.type.name === 'image') {
                   if (event.key === 'L' || event.key === 'l') {
                      event.preventDefault();
@@ -160,9 +161,11 @@ export default function ArticleEditor({
          }
          // Also dispatch global event for Astro script
          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('articleEditorChange', {
-               detail: { content: html },
-            }));
+            window.dispatchEvent(
+               new CustomEvent('articleEditorChange', {
+                  detail: { content: html },
+               })
+            );
          }
       },
    });
@@ -183,33 +186,54 @@ export default function ArticleEditor({
 
    return (
       <EditorContext.Provider value={providerValue}>
-      <div className={`border border-gray-300 rounded-lg bg-white ${className}`}>
-         {/* Toolbar - Using MenuBar component with useEditorState for optimized re-renders */}
-         {editor && (
-            <MenuBar
-               editor={editor}
-               onImageClick={() => setShowImageDialog(true)}
-               onLinkClick={() => {
-                  const { from, to } = editor.state.selection;
-                  const selectedText = editor.state.doc.textBetween(from, to, ' ');
-                  setLinkText(selectedText);
-                  if (editor.isActive('link')) {
-                     const attrs = editor.getAttributes('link');
-                     setLinkUrl(attrs.href || '');
-                  }
-                  setShowLinkDialog(true);
-               }}
-            />
-         )}
+         <div className={`border border-gray-300 rounded-lg bg-white ${className}`}>
+            {/* Toolbar - Using MenuBar component with useEditorState for optimized re-renders */}
+            {editor && (
+               <MenuBar
+                  editor={editor}
+                  onImageClick={() => {
+                     // Check if an image is selected
+                     const { state } = editor;
+                     const { selection } = state;
+                     const node = state.doc.nodeAt(selection.from);
 
-         {/* Editor Content */}
-         <div className="prose-wrapper overflow-auto max-h-[600px] tiptap-editor">
-            <EditorContent editor={editor} />
+                     if (node?.type.name === 'image') {
+                        // Edit existing image
+                        setIsEditingImage(true);
+                        setImageUrl(node.attrs.src || '');
+                        setImageAlt(node.attrs.alt || '');
+                        setImageUploadMethod('url'); // Always show URL mode for editing
+                        setShowImageDialog(true);
+                     } else {
+                        // Insert new image
+                        setIsEditingImage(false);
+                        setImageUrl('');
+                        setImageAlt('');
+                        setImageUploadMethod('url');
+                        setShowImageDialog(true);
+                     }
+                  }}
+                  onLinkClick={() => {
+                     const { from, to } = editor.state.selection;
+                     const selectedText = editor.state.doc.textBetween(from, to, ' ');
+                     setLinkText(selectedText);
+                     if (editor.isActive('link')) {
+                        const attrs = editor.getAttributes('link');
+                        setLinkUrl(attrs.href || '');
+                     }
+                     setShowLinkDialog(true);
+                  }}
+               />
+            )}
+
+            {/* Editor Content */}
+            <div className="prose-wrapper overflow-auto max-h-[600px] tiptap-editor">
+               <EditorContent editor={editor} />
+            </div>
          </div>
-      </div>
 
-      {/* Custom Styles for Tiptap Editor */}
-      <style>{`
+         {/* Custom Styles for Tiptap Editor */}
+         <style>{`
          .tiptap-editor .ProseMirror {
             outline: none;
          }
@@ -547,229 +571,233 @@ export default function ArticleEditor({
          }
       `}</style>
 
-      {/* Image Insert Dialog */}
-      <Dialog open={showImageDialog} onOpenChange={(open) => {
-         setShowImageDialog(open);
-         if (!open) {
-            // Reset state when dialog closes
-            setImageUrl('');
-            setImageFile(null);
-            setImagePreview('');
-            setImageUploadMethod('url');
-         }
-      }}>
-         <DialogContent>
-            <DialogHeader>
-               <DialogTitle>Insert Image</DialogTitle>
-               <DialogDescription>
-                  Upload an image file or enter an image URL
-               </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-               {/* Upload Method Toggle */}
-               <div className="flex gap-2 border-b border-gray-200 pb-3">
-                  <button
-                     type="button"
-                     onClick={() => setImageUploadMethod('url')}
-                     className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        imageUploadMethod === 'url'
-                           ? 'bg-blue-100 text-blue-700'
-                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                     }`}
-                  >
-                     From URL
-                  </button>
-                  <button
-                     type="button"
-                     onClick={() => setImageUploadMethod('file')}
-                     className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        imageUploadMethod === 'file'
-                           ? 'bg-blue-100 text-blue-700'
-                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                     }`}
-                  >
-                     Upload File
-                  </button>
-               </div>
-
-               {imageUploadMethod === 'url' ? (
-                  <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Image URL
-                     </label>
-                     <Input
-                        type="url"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="https://example.com/image.jpg"
-                        autoFocus
-                     />
-                     {imageUrl && (
-                        <div className="mt-3">
-                           <img
-                              src={imageUrl}
-                              alt="Preview"
-                              className="max-w-full h-40 object-contain border border-gray-200 rounded-lg"
-                              onError={(e) => {
-                                 (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                           />
-                        </div>
-                     )}
-                  </div>
-               ) : (
-                  <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Select Image File
-                     </label>
-                     <div className="space-y-3">
-                        <Input
-                           type="file"
-                           accept="image/*"
-                           onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                 setImageFile(file);
-                                 // Create preview
-                                 const reader = new FileReader();
-                                 reader.onloadend = () => {
-                                    setImagePreview(reader.result as string);
-                                 };
-                                 reader.readAsDataURL(file);
-                              }
-                           }}
-                           className="cursor-pointer"
-                        />
-                        {imagePreview && (
-                           <div className="mt-3">
-                              <img
-                                 src={imagePreview}
-                                 alt="Preview"
-                                 className="max-w-full h-40 object-contain border border-gray-200 rounded-lg"
-                              />
-                              <p className="text-xs text-gray-500 mt-2">
-                                 File: {imageFile?.name} ({(imageFile?.size || 0) / 1024} KB)
-                              </p>
-                           </div>
-                        )}
+         {/* Image Insert Dialog */}
+         <Dialog
+            open={showImageDialog}
+            onOpenChange={(open) => {
+               setShowImageDialog(open);
+               if (!open) {
+                  // Reset state when dialog closes
+                  setImageUrl('');
+                  setImageFile(null);
+                  setImagePreview('');
+                  setImageAlt('');
+                  setImageUploadMethod('url');
+                  setIsEditingImage(false);
+               }
+            }}
+         >
+            <DialogContent>
+               <DialogHeader>
+                  <DialogTitle>{isEditingImage ? 'Edit Image' : 'Insert Image'}</DialogTitle>
+                  <DialogDescription>{isEditingImage ? 'Edit image URL and alt text' : 'Upload an image file or enter an image URL'}</DialogDescription>
+               </DialogHeader>
+               <div className="space-y-4 py-4">
+                  {/* Upload Method Toggle - Hide when editing */}
+                  {!isEditingImage && (
+                     <div className="flex gap-2 border-b border-gray-200 pb-3">
+                        <button
+                           type="button"
+                           onClick={() => setImageUploadMethod('url')}
+                           className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${imageUploadMethod === 'url' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                        >
+                           From URL
+                        </button>
+                        <button
+                           type="button"
+                           onClick={() => setImageUploadMethod('file')}
+                           className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${imageUploadMethod === 'file' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                        >
+                           Upload File
+                        </button>
                      </div>
-                  </div>
-               )}
-            </div>
-            <DialogFooter>
-               <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                     setShowImageDialog(false);
-                     setImageUrl('');
-                     setImageFile(null);
-                     setImagePreview('');
-                     setImageUploadMethod('url');
-                  }}
-               >
-                  Cancel
-               </Button>
-               <Button
-                  type="button"
-                  onClick={async () => {
-                     if (imageUploadMethod === 'url' && imageUrl.trim()) {
-                        editor.chain().focus().setImage({ src: imageUrl }).run();
+                  )}
+
+                  {(!isEditingImage && imageUploadMethod === 'url') || isEditingImage ? (
+                     <div className="space-y-4">
+                        <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+                           <Input type="url" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://example.com/image.jpg" autoFocus />
+                           {imageUrl && (
+                              <div className="mt-3">
+                                 <img
+                                    src={imageUrl}
+                                    alt="Preview"
+                                    className="max-w-full h-40 object-contain border border-gray-200 rounded-lg"
+                                    onError={(e) => {
+                                       (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                 />
+                              </div>
+                           )}
+                        </div>
+                        <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Deskripsi Gambar (Alt Text) <span className="text-xs text-gray-500 font-normal">(Opsional)</span>
+                           </label>
+                           <Input type="text" value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Contoh: Grafik pertumbuhan ekonomi Q4 2024" className="text-sm" />
+                           <p className="text-xs text-gray-500 mt-1">Jelaskan gambar untuk aksesibilitas dan SEO</p>
+                        </div>
+                     </div>
+                  ) : (
+                     <div className="space-y-4">
+                        <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">Select Image File</label>
+                           <div className="space-y-3">
+                              <Input
+                                 type="file"
+                                 accept="image/*"
+                                 onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                       setImageFile(file);
+                                       // Create preview
+                                       const reader = new FileReader();
+                                       reader.onloadend = () => {
+                                          setImagePreview(reader.result as string);
+                                       };
+                                       reader.readAsDataURL(file);
+                                    }
+                                 }}
+                                 className="cursor-pointer"
+                              />
+                              {imagePreview && (
+                                 <div className="mt-3">
+                                    <img src={imagePreview} alt="Preview" className="max-w-full h-40 object-contain border border-gray-200 rounded-lg" />
+                                    <p className="text-xs text-gray-500 mt-2">
+                                       File: {imageFile?.name} ({(imageFile?.size || 0) / 1024} KB)
+                                    </p>
+                                 </div>
+                              )}
+                           </div>
+                        </div>
+                        <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Deskripsi Gambar (Alt Text) <span className="text-xs text-gray-500 font-normal">(Opsional)</span>
+                           </label>
+                           <Input type="text" value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Contoh: Grafik pertumbuhan ekonomi Q4 2024" className="text-sm" />
+                           <p className="text-xs text-gray-500 mt-1">Jelaskan gambar untuk aksesibilitas dan SEO</p>
+                        </div>
+                     </div>
+                  )}
+               </div>
+               <DialogFooter>
+                  <Button
+                     type="button"
+                     variant="outline"
+                     onClick={() => {
                         setShowImageDialog(false);
                         setImageUrl('');
-                     } else if (imageUploadMethod === 'file' && imagePreview) {
-                        // Use base64 for file upload
-                        editor.chain().focus().setImage({ src: imagePreview }).run();
-                        setShowImageDialog(false);
                         setImageFile(null);
                         setImagePreview('');
-                     }
-                  }}
-                  disabled={
-                     (imageUploadMethod === 'url' && !imageUrl.trim()) ||
-                     (imageUploadMethod === 'file' && !imagePreview)
-                  }
-               >
-                  Insert
-               </Button>
-            </DialogFooter>
-         </DialogContent>
-      </Dialog>
+                        setImageAlt('');
+                        setImageUploadMethod('url');
+                     }}
+                  >
+                     Cancel
+                  </Button>
+                  <Button
+                     type="button"
+                     onClick={async () => {
+                        if (isEditingImage) {
+                           // Update existing image attributes
+                           editor
+                              .chain()
+                              .focus()
+                              .updateAttributes('image', {
+                                 src: imageUrl,
+                                 alt: imageAlt || undefined,
+                              })
+                              .run();
+                           setShowImageDialog(false);
+                           setImageUrl('');
+                           setImageAlt('');
+                           setIsEditingImage(false);
+                        } else if (imageUploadMethod === 'url' && imageUrl.trim()) {
+                           // Insert new image from URL
+                           editor
+                              .chain()
+                              .focus()
+                              .setImage({ src: imageUrl, alt: imageAlt || undefined })
+                              .run();
+                           setShowImageDialog(false);
+                           setImageUrl('');
+                           setImageAlt('');
+                        } else if (imageUploadMethod === 'file' && imagePreview) {
+                           // Insert new image from file
+                           editor
+                              .chain()
+                              .focus()
+                              .setImage({ src: imagePreview, alt: imageAlt || undefined })
+                              .run();
+                           setShowImageDialog(false);
+                           setImageFile(null);
+                           setImagePreview('');
+                           setImageAlt('');
+                        }
+                     }}
+                     disabled={isEditingImage ? !imageUrl.trim() : (imageUploadMethod === 'url' && !imageUrl.trim()) || (imageUploadMethod === 'file' && !imagePreview)}
+                  >
+                     {isEditingImage ? 'Update' : 'Insert'}
+                  </Button>
+               </DialogFooter>
+            </DialogContent>
+         </Dialog>
 
-      {/* Link Insert Dialog */}
-      <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
-         <DialogContent>
-            <DialogHeader>
-               <DialogTitle>
-                  {editor.isActive('link') ? 'Edit Link' : 'Insert Link'}
-               </DialogTitle>
-               <DialogDescription>
-                  Add a link to selected text or insert a new link
-               </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-               <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                     Link URL
-                  </label>
-                  <Input
-                     type="url"
-                     value={linkUrl}
-                     onChange={(e) => setLinkUrl(e.target.value)}
-                     placeholder="https://example.com"
-                     autoFocus
-                  />
+         {/* Link Insert Dialog */}
+         <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+            <DialogContent>
+               <DialogHeader>
+                  <DialogTitle>{editor.isActive('link') ? 'Edit Link' : 'Insert Link'}</DialogTitle>
+                  <DialogDescription>Add a link to selected text or insert a new link</DialogDescription>
+               </DialogHeader>
+               <div className="space-y-4 py-4">
+                  <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">Link URL</label>
+                     <Input type="url" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://example.com" autoFocus />
+                  </div>
+                  <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">Link Text (optional)</label>
+                     <Input type="text" value={linkText} onChange={(e) => setLinkText(e.target.value)} placeholder="Link text" />
+                  </div>
                </div>
-               <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                     Link Text (optional)
-                  </label>
-                  <Input
-                     type="text"
-                     value={linkText}
-                     onChange={(e) => setLinkText(e.target.value)}
-                     placeholder="Link text"
-                  />
-               </div>
-            </div>
-            <DialogFooter>
-               <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                     if (editor.isActive('link')) {
-                        editor.chain().focus().unsetLink().run();
-                     }
-                     setShowLinkDialog(false);
-                     setLinkUrl('');
-                     setLinkText('');
-                  }}
-               >
-                  {editor.isActive('link') ? 'Remove Link' : 'Cancel'}
-               </Button>
-               <Button
-                  type="button"
-                  onClick={() => {
-                     if (linkUrl.trim()) {
-                        if (linkText.trim()) {
-                           // Replace selected text with link
-                           editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
-                        } else {
-                           // Apply link to selected text
-                           editor.chain().focus().setLink({ href: linkUrl }).run();
+               <DialogFooter>
+                  <Button
+                     type="button"
+                     variant="outline"
+                     onClick={() => {
+                        if (editor.isActive('link')) {
+                           editor.chain().focus().unsetLink().run();
                         }
                         setShowLinkDialog(false);
                         setLinkUrl('');
                         setLinkText('');
-                     }
-                  }}
-               >
-                  {editor.isActive('link') ? 'Update' : 'Insert'}
-               </Button>
-            </DialogFooter>
-         </DialogContent>
-      </Dialog>
+                     }}
+                  >
+                     {editor.isActive('link') ? 'Remove Link' : 'Cancel'}
+                  </Button>
+                  <Button
+                     type="button"
+                     onClick={() => {
+                        if (linkUrl.trim()) {
+                           if (linkText.trim()) {
+                              // Replace selected text with link
+                              editor.chain().focus().insertContent(`<a href="${linkUrl}">${linkText}</a>`).run();
+                           } else {
+                              // Apply link to selected text
+                              editor.chain().focus().setLink({ href: linkUrl }).run();
+                           }
+                           setShowLinkDialog(false);
+                           setLinkUrl('');
+                           setLinkText('');
+                        }
+                     }}
+                  >
+                     {editor.isActive('link') ? 'Update' : 'Insert'}
+                  </Button>
+               </DialogFooter>
+            </DialogContent>
+         </Dialog>
       </EditorContext.Provider>
    );
 }
-

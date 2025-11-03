@@ -116,7 +116,7 @@ export const POST: APIRoute = async (context) => {
 
    try {
       const body = await context.request.json();
-      const { title, slug, summary, content, thumbnail_url, category_id, source_id, status = 'draft', tag_ids = [], url_original } = body;
+      const { title, slug, summary, content, thumbnail_url, thumbnail_alt, category_id, source_id, status = 'draft', tag_ids = [], url_original } = body;
 
       // Validation
       if (!title || !slug || !content || !category_id) {
@@ -135,6 +135,7 @@ export const POST: APIRoute = async (context) => {
             summary,
             content,
             thumbnail_url,
+            thumbnail_alt: thumbnail_alt || null,
             category_id,
             source_id,
             status,

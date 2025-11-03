@@ -116,6 +116,7 @@ export const PUT: APIRoute = async (context) => {
 			summary,
 			content,
 			thumbnail_url,
+			thumbnail_alt,
 			category_id,
 			source_id,
 			status,
@@ -134,6 +135,7 @@ export const PUT: APIRoute = async (context) => {
 		if (summary !== undefined) updateData.summary = summary;
 		if (content) updateData.content = content;
 		if (thumbnail_url !== undefined) updateData.thumbnail_url = thumbnail_url;
+		if (thumbnail_alt !== undefined) updateData.thumbnail_alt = thumbnail_alt || null;
 		if (category_id) updateData.category_id = category_id;
 		if (source_id !== undefined) updateData.source_id = source_id;
 		if (status) {
@@ -144,11 +146,20 @@ export const PUT: APIRoute = async (context) => {
 		}
 		if (url_original !== undefined) updateData.url_original = url_original;
 
+		// Parse id to integer
+		const articleId = parseInt(id);
+		if (isNaN(articleId)) {
+			return new Response(JSON.stringify({ error: 'Invalid article ID' }), {
+				status: 400,
+				headers: { 'Content-Type': 'application/json' },
+			});
+		}
+
 		// Update article using authenticated client (RLS will enforce policies)
 		const { data: article, error: articleError } = await authenticatedClient
 			.from('articles')
 			.update(updateData)
-			.eq('id', id)
+			.eq('id', articleId)
 			.select()
 			.single();
 
@@ -162,16 +173,23 @@ export const PUT: APIRoute = async (context) => {
 		// Update tags if provided (also using authenticated client)
 		if (tag_ids !== undefined && Array.isArray(tag_ids)) {
 			// Delete existing tags
-			await authenticatedClient.from('article_tags').delete().eq('article_id', id);
+			await authenticatedClient.from('article_tags').delete().eq('article_id', articleId);
 
 			// Insert new tags
 			if (tag_ids.length > 0) {
 				const articleTags = tag_ids.map((tagId: number) => ({
-					article_id: parseInt(id),
-					tag_id: tagId,
+					article_id: articleId,
+					tag_id: parseInt(tagId.toString()),
 				}));
 
-				await authenticatedClient.from('article_tags').insert(articleTags);
+				const { error: tagsError } = await authenticatedClient.from('article_tags').insert(articleTags);
+				
+				if (tagsError) {
+					return new Response(JSON.stringify({ error: `Failed to update tags: ${tagsError.message}` }), {
+						status: 500,
+						headers: { 'Content-Type': 'application/json' },
+					});
+				}
 			}
 		}
 
@@ -219,11 +237,20 @@ export const DELETE: APIRoute = async (context) => {
 			});
 		}
 
+		// Parse id to integer
+		const articleId = parseInt(id);
+		if (isNaN(articleId)) {
+			return new Response(JSON.stringify({ error: 'Invalid article ID' }), {
+				status: 400,
+				headers: { 'Content-Type': 'application/json' },
+			});
+		}
+
 		// Delete article_tags first (foreign key constraint) - using authenticated client
-		await authenticatedClient.from('article_tags').delete().eq('article_id', id);
+		await authenticatedClient.from('article_tags').delete().eq('article_id', articleId);
 
 		// Delete article using authenticated client (RLS will enforce policies)
-		const { error } = await authenticatedClient.from('articles').delete().eq('id', id);
+		const { error } = await authenticatedClient.from('articles').delete().eq('id', articleId);
 
 		if (error) {
 			return new Response(JSON.stringify({ error: error.message }), {
