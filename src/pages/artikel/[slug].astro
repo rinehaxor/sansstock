@@ -1,0 +1,456 @@
+---
+export const prerender = false;
+
+import { Image } from 'astro:assets';
+import Layout from '../../layouts/Layout.astro';
+import { supabase } from '../../db/supabase';
+import PopularNews from '../../components/PopularNews.astro';
+import FeaturedArticles from '../../components/FeaturedArticles.astro';
+import RelatedArticles from '../../components/RelatedArticles.astro';
+import AdsWidget from '../../components/AdsWidget.astro';
+import ImageDescription from '../../components/ImageDescription.tsx';
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  return Astro.redirect('/artikel');
+}
+
+// Fetch article by slug
+const { data: article, error: articleError } = await supabase
+  .from('articles')
+  .select(`
+    *,
+    categories:category_id (
+      id,
+      name,
+      slug,
+      description
+    ),
+    sources:source_id (
+      id,
+      name,
+      slug
+    ),
+    article_tags (
+      tags:tag_id (
+        id,
+        name,
+        slug
+      )
+    )
+  `)
+  .eq('slug', slug)
+  .eq('status', 'published')
+  .single();
+
+if (articleError || !article) {
+  return Astro.redirect('/artikel');
+}
+
+// Helper function to format date
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('id-ID', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+// Helper function to calculate reading time
+function calculateReadingTime(content: string): number {
+  const textContent = content.replace(/<[^>]*>/g, ''); // Remove HTML tags
+  const words = textContent.trim().split(/\s+/).length;
+  const readingTime = Math.ceil(words / 200); // ~200 words per minute
+  return readingTime;
+}
+
+const readingTime = calculateReadingTime(article.content || '');
+const siteUrl = Astro.site?.href || 'http://localhost:4321';
+const articleUrl = `${siteUrl}/artikel/${article.slug}`;
+const articleImage = article.thumbnail_url || `${siteUrl}/og-default.jpg`;
+const metaTitle = article.meta_title || article.title;
+const metaDescription = article.meta_description || article.summary || '';
+
+// Get alt text - prioritize thumbnail_alt from articles table, then media_metadata
+let thumbnailAltText: string | null = null;
+if (article.thumbnail_url) {
+  // First, use thumbnail_alt from articles table (preferred)
+  if (article.thumbnail_alt) {
+    thumbnailAltText = article.thumbnail_alt;
+  } else {
+    // Fallback to media_metadata if thumbnail_alt is not set
+    try {
+      const { data: mediaMetadata } = await supabase
+        .from('media_metadata')
+        .select('alt_text')
+        .eq('file_url', article.thumbnail_url)
+        .single();
+      
+      if (mediaMetadata?.alt_text) {
+        thumbnailAltText = mediaMetadata.alt_text;
+      }
+    } catch (e) {
+      // If no alt text found, will fallback to article.title in the Image component
+    }
+  }
+}
+
+// Get tags for meta keywords
+const tags = article.article_tags?.map((at: any) => at.tags?.name).filter(Boolean).join(', ') || '';
+---
+
+<Layout 
+  title={`${metaTitle} - SansStocks`}
+  description={metaDescription}
+  keywords={tags}
+>
+  <Fragment slot="head">
+    {/* Open Graph */}
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content={metaTitle} />
+    <meta property="og:description" content={metaDescription} />
+    <meta property="og:image" content={articleImage} />
+    <meta property="og:url" content={articleUrl} />
+    <meta property="og:site_name" content="SansStocks" />
+    
+    {/* Twitter Card */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={metaTitle} />
+    <meta name="twitter:description" content={metaDescription} />
+    <meta name="twitter:image" content={articleImage} />
+    
+    {/* Canonical URL */}
+    <link rel="canonical" href={articleUrl} />
+    
+    {/* Article Meta */}
+    {article.published_at && <meta property="article:published_time" content={article.published_at} />}
+    {article.categories && <meta property="article:section" content={article.categories.name} />}
+    {article.article_tags && article.article_tags.length > 0 && (
+      article.article_tags.map((at: any) => at.tags && (
+        <meta property="article:tag" content={at.tags.name} />
+      ))
+    )}
+    
+    {/* Structured Data (JSON-LD) */}
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": article.title,
+      "description": metaDescription,
+      "image": articleImage,
+      "datePublished": article.published_at || article.created_at,
+      "dateModified": article.updated_at || article.created_at,
+      "author": {
+        "@type": "Organization",
+        "name": "SansStocks"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "SansStocks",
+        "logo": {
+          "@type": "ImageObject",
+          "url": `${siteUrl}/logo.png`
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": articleUrl
+      }
+    })} />
+  </Fragment>
+
+  <main class="min-h-screen bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="grid lg:grid-cols-12 gap-8">
+        <!-- Main Article Content -->
+        <article class="lg:col-span-8">
+          {/* Breadcrumb */}
+          <nav class="mb-6 text-sm text-gray-600">
+            <a href="/" class="hover:text-gray-900">Beranda</a>
+            <span class="mx-2">/</span>
+            <a href="/artikel" class="hover:text-gray-900">Artikel</a>
+            {article.categories && (
+              <>
+                <span class="mx-2">/</span>
+                <a href={`/categories/${article.categories.slug}`} class="hover:text-gray-900">{article.categories.name}</a>
+              </>
+            )}
+            <span class="mx-2">/</span>
+            <span class="text-gray-900">{article.title}</span>
+          </nav>
+
+          {/* Article Header */}
+          <header class="mb-8">
+            {article.categories && (
+              <a href={`/categories/${article.categories.slug}`} class="inline-block mb-4">
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium hover:bg-blue-200 transition-colors">
+                  {article.categories.name}
+                </span>
+              </a>
+            )}
+            
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
+              {article.title}
+            </h1>
+            
+            {article.summary && (
+              <p class="text-xl text-gray-600 mb-6 leading-relaxed">
+                {article.summary}
+              </p>
+            )}
+
+            {/* Article Meta */}
+            <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-6">
+              <time datetime={article.published_at || article.created_at}>
+                {formatDate(article.published_at || article.created_at)}
+              </time>
+              {readingTime > 0 && (
+                <>
+                  <span>•</span>
+                  <span>{readingTime} menit membaca</span>
+                </>
+              )}
+              {article.sources && (
+                <>
+                  <span>•</span>
+                  <span>Sumber: {article.sources.name}</span>
+                </>
+              )}
+            </div>
+
+            {/* Tags */}
+            {article.article_tags && article.article_tags.length > 0 && (
+              <div class="flex flex-wrap gap-2 mb-6">
+                {article.article_tags.map((at: any) => at.tags && (
+                  <a 
+                    href={`/tags/${at.tags.slug}`}
+                    class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    #{at.tags.name}
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {/* Featured Image */}
+            {article.thumbnail_url && (
+              <div class="mb-8 rounded-xl overflow-hidden">
+                <Image 
+                  src={article.thumbnail_url} 
+                  alt={thumbnailAltText || article.title}
+                  width={1200}
+                  height={675}
+                  class="w-full h-auto object-cover"
+                  loading="eager"
+                  format="webp"
+                />
+              </div>
+            )}
+          </header>
+
+          {/* Article Content */}
+          <div class="prose prose-lg max-w-none bg-white rounded-xl p-8 shadow-sm mb-8">
+            <div set:html={article.content} />
+            <ImageDescription client:load />
+          </div>
+
+          {/* Article Footer */}
+          <footer class="pt-8 border-t border-gray-200">
+            {article.url_original && (
+              <div class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p class="text-sm text-gray-700 mb-2">
+                  <strong>Artikel Asli:</strong>
+                </p>
+                <a 
+                  href={article.url_original} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="text-blue-600 hover:text-blue-700 underline text-sm"
+                >
+                  {article.url_original}
+                </a>
+              </div>
+            )}
+
+            {/* Social Share */}
+            <div class="flex items-center gap-4">
+              <span class="text-sm font-medium text-gray-700">Bagikan:</span>
+              <div class="flex gap-2">
+                <a 
+                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(articleUrl)}&text=${encodeURIComponent(article.title)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="p-2 text-gray-600 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                  aria-label="Share on Twitter"
+                >
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                  </svg>
+                </a>
+                <a 
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  aria-label="Share on Facebook"
+                >
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
+                  </svg>
+                </a>
+                <a 
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(articleUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="p-2 text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                  aria-label="Share on LinkedIn"
+                >
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                  </svg>
+                </a>
+                <button 
+                  onclick={`navigator.share({title: '${article.title}', text: '${metaDescription}', url: '${articleUrl}'})`}
+                  class="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Share via native share"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </footer>
+          
+          {/* Related Articles */}
+          <RelatedArticles 
+            currentArticleId={article.id}
+            currentCategoryId={article.category_id}
+            currentTagIds={article.article_tags?.map((at: any) => at.tags?.id).filter(Boolean) || []}
+          />
+        </article>
+
+    <!-- Sidebar -->
+    <aside class="lg:col-span-4">
+      <div class="sticky top-8 space-y-4">
+        <FeaturedArticles currentArticleId={article.id} />
+        <AdsWidget />
+        <PopularNews currentArticleId={article.id} />
+      </div>
+    </aside>
+  </div>
+  </main>
+</Layout>
+
+<style>
+  /* Prose styling for article content */
+  .prose {
+    color: #374151;
+  }
+  .prose h1 {
+    font-size: 2.25em;
+    font-weight: 700;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+    color: #111827;
+  }
+  .prose h2 {
+    font-size: 1.875em;
+    font-weight: 600;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #111827;
+  }
+  .prose h3 {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin-top: 1.25em;
+    margin-bottom: 0.5em;
+    color: #111827;
+  }
+  .prose p {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    line-height: 1.75;
+  }
+  .prose img {
+    margin-top: 2em;
+    margin-bottom: 0;
+    border-radius: 0.5rem;
+    max-width: 100%;
+    height: auto;
+  }
+  .prose img[data-description] {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    display: block !important;
+  }
+  .prose p:has(img[data-description]) {
+    margin-bottom: 0 !important;
+  }
+  .prose .image-description {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    color: #6b7280;
+    margin-top: -0.5em !important;
+    margin-bottom: 2em;
+    padding-top: 0 !important;
+    padding-bottom: 0.5em !important;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: center;
+    font-style: italic;
+    display: block;
+  }
+  .prose ul, .prose ol {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    padding-left: 1.625em;
+  }
+  .prose li {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+  }
+  .prose blockquote {
+    border-left: 4px solid #3b82f6;
+    padding-left: 1em;
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
+    font-style: italic;
+    color: #6b7280;
+  }
+  .prose code {
+    background-color: #f3f4f6;
+    padding: 0.125em 0.375em;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+    font-family: 'Courier New', monospace;
+  }
+  .prose pre {
+    background-color: #1f2937;
+    color: #f9fafb;
+    padding: 1em;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
+  }
+  .prose pre code {
+    background-color: transparent;
+    padding: 0;
+    color: inherit;
+  }
+  .prose a {
+    color: #2563eb;
+    text-decoration: underline;
+  }
+  .prose a:hover {
+    color: #1d4ed8;
+  }
+  .prose strong {
+    font-weight: 600;
+    color: #111827;
+  }
+</style>
+

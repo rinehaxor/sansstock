@@ -33,15 +33,25 @@ try {
 
 const email = session.data.user?.email;
 
-// Fetch tags
+// Pagination
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 10;
 const search = Astro.url.searchParams.get('search') || '';
-let query = supabase.from('tags').select('id, name, slug, description, created_at').order('name', { ascending: true });
+
+// Fetch tags with pagination
+let query = supabase
+  .from('tags')
+  .select('id, name, slug, description, created_at', { count: 'exact' })
+  .order('created_at', { ascending: false })
+  .range((page - 1) * limit, page * limit - 1);
 
 if (search) {
   query = query.or(`name.ilike.%${search}%,slug.ilike.%${search}%`);
 }
 
-const { data: tags, error } = await query;
+const { data: tags, error, count } = await query;
+
+const totalPages = count ? Math.ceil(count / limit) : 0;
 
 // Get tag usage count (how many articles use each tag)
 const tagIds = tags?.map((t: any) => t.id) || [];
@@ -72,7 +82,7 @@ if (tagIds.length > 0) {
 				</div>
 				<a 
 					href="/dashboard/tags/new"
-					class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+					class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
 				>
 					<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
@@ -87,6 +97,12 @@ if (tagIds.length > 0) {
 			client:load
 			tags={JSON.stringify(tags || [])} 
 			tagUsage={JSON.stringify(tagUsage)}
+			currentPage={page}
+			totalPages={totalPages}
+			totalItems={count || 0}
+			itemsPerPage={limit}
+			paginationBaseUrl="/dashboard/tags"
+			initialSearch={search}
 		/>
 	</div>
 

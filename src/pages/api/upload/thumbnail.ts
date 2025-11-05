@@ -26,6 +26,7 @@ export const POST: APIRoute = async (context) => {
    try {
       const formData = await context.request.formData();
       const file = formData.get('file') as File;
+      const altTextFromForm = (formData.get('alt_text') as string) || '';
 
       if (!file) {
          return new Response(JSON.stringify({ error: 'No file provided' }), {
@@ -100,6 +101,7 @@ export const POST: APIRoute = async (context) => {
             file_name: file.name,
             file_url: urlData.publicUrl,
             file_size: file.size,
+            alt_text: altTextFromForm || null,
             created_by: userId,
             updated_by: userId,
          });
@@ -114,6 +116,7 @@ export const POST: APIRoute = async (context) => {
             success: true,
             url: urlData.publicUrl,
             path: fileName,
+            alt_text: altTextFromForm || null,
          }),
          {
             status: 200,

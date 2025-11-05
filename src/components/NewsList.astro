@@ -1,4 +1,5 @@
 ---
+import { Image } from 'astro:assets';
 import { supabase } from '../db/supabase';
 import PopularNews from './PopularNews.astro';
 import AdsWidget from './AdsWidget.astro';
@@ -23,6 +24,34 @@ const { data: articles, error } = await supabase
   .eq('status', 'published')
   .order('published_at', { ascending: false })
   .limit(4);
+
+// Helper function untuk get alt text dari media_metadata
+async function getAltText(thumbnailUrl: string | null): Promise<string | null> {
+  if (!thumbnailUrl) return null;
+  
+  try {
+    const { data: mediaMetadata } = await supabase
+      .from('media_metadata')
+      .select('alt_text')
+      .eq('file_url', thumbnailUrl)
+      .single();
+    
+    return mediaMetadata?.alt_text || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Get alt text untuk semua artikel dari media_metadata
+const articlesWithAltText = await Promise.all(
+  (articles || []).map(async (article: any) => {
+    const altText = await getAltText(article.thumbnail_url);
+    return {
+      ...article,
+      thumbnail_alt: altText,
+    };
+  })
+);
 
 // Helper function untuk format waktu relatif
 function getTimeAgo(dateString: string | null): string {
@@ -70,25 +99,34 @@ function getCategoryColor(categoryName: string): string {
 		<!-- Main News Content -->
 		<div class="lg:col-span-2">
 			<div class="space-y-6">
-				{articles && articles.length > 0 ? (
-					articles.map((article: any) => {
+				{articlesWithAltText && articlesWithAltText.length > 0 ? (
+					articlesWithAltText.map((article: any) => {
 						const category = article.categories?.name || 'Umum';
 						const categoryColor = getCategoryColor(category);
 						const timeAgo = getTimeAgo(article.published_at || article.created_at);
 						const articleUrl = `/artikel/${article.slug}`;
-						const thumbnailUrl = article.thumbnail_url || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=200&h=120&fit=crop&crop=center';
 						
 						return (
 							<article class="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
 								<a href={articleUrl} class="flex gap-6">
 									<div class="flex-shrink-0">
-										<img 
-											src={thumbnailUrl} 
-											alt={article.title} 
-											class="w-48 h-28 rounded-lg object-cover"
-											loading="lazy"
-											onerror="this.src='https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=200&h=120&fit=crop&crop=center'"
-										/>
+										{article.thumbnail_url ? (
+											<Image 
+												src={article.thumbnail_url} 
+												alt={article.thumbnail_alt || article.title} 
+												width={192}
+												height={112}
+												class="w-48 h-28 rounded-lg object-cover"
+												loading="lazy"
+												format="webp"
+											/>
+										) : (
+											<div class="w-48 h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
+												<svg class="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+												</svg>
+											</div>
+										)}
 									</div>
 									<div class="flex-1 min-w-0">
 										<h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">

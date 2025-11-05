@@ -30,6 +30,12 @@ export default function MediaLibrary() {
    const [editAltText, setEditAltText] = useState('');
    const [editDescription, setEditDescription] = useState('');
    const [saving, setSaving] = useState(false);
+   const [showUploadDialog, setShowUploadDialog] = useState(false);
+   const [uploadFile, setUploadFile] = useState<File | null>(null);
+   const [uploadPreview, setUploadPreview] = useState<string>('');
+   const [uploadAltText, setUploadAltText] = useState('');
+   const [uploading, setUploading] = useState(false);
+   const [deleting, setDeleting] = useState(false);
 
    useEffect(() => {
       fetchMedia();
@@ -80,12 +86,13 @@ export default function MediaLibrary() {
       });
    };
 
-   const handleSelectItem = (id: string) => {
+   const handleSelectItem = (id: string | number) => {
+      const idStr = String(id);
       const newSelected = new Set(selectedItems);
-      if (newSelected.has(id)) {
-         newSelected.delete(id);
+      if (newSelected.has(idStr)) {
+         newSelected.delete(idStr);
       } else {
-         newSelected.add(id);
+         newSelected.add(idStr);
       }
       setSelectedItems(newSelected);
    };
@@ -94,7 +101,7 @@ export default function MediaLibrary() {
       if (selectedItems.size === mediaItems.length) {
          setSelectedItems(new Set());
       } else {
-         setSelectedItems(new Set(mediaItems.map((item) => item.id)));
+         setSelectedItems(new Set(mediaItems.map((item) => String(item.id))));
       }
    };
 
@@ -156,6 +163,143 @@ export default function MediaLibrary() {
       alert('URL berhasil disalin!');
    };
 
+   const handleUpload = async () => {
+      if (!uploadFile) {
+         alert('Pilih file terlebih dahulu');
+         return;
+      }
+
+      setUploading(true);
+      try {
+         const formData = new FormData();
+         formData.append('file', uploadFile);
+         if (uploadAltText.trim()) {
+            formData.append('alt_text', uploadAltText.trim());
+         }
+
+         const response = await fetch('/api/upload/thumbnail', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+         });
+
+         if (response.ok) {
+            const result = await response.json();
+            // Optimistically add or update the uploaded item in local list
+            if (result.path) {
+               setMediaItems((prev) => {
+                  const exists = prev.some((i) => i.file_path === result.path);
+                  if (exists) {
+                     return prev.map((i) =>
+                        i.file_path === result.path
+                           ? { ...i, alt_text: uploadAltText.trim() || i.alt_text, url: result.url || i.url }
+                           : i
+                     );
+                  }
+                  // If not exists, let fetchMedia load it shortly; keep UI consistent meanwhile
+                  return prev;
+               });
+            }
+
+            // Reset form and refresh media list
+            setUploadFile(null);
+            setUploadPreview('');
+            setUploadAltText('');
+            setShowUploadDialog(false);
+            fetchMedia();
+            alert('Gambar berhasil diupload!');
+         } else {
+            const error = await response.json();
+            alert('Error: ' + (error.error || 'Gagal mengupload gambar'));
+         }
+      } catch (error) {
+         alert('Error: Gagal mengupload gambar');
+      } finally {
+         setUploading(false);
+      }
+   };
+
+   const handleDelete = async (id: string | number) => {
+      if (!confirm('Apakah Anda yakin ingin menghapus gambar ini?')) {
+         return;
+      }
+
+      setDeleting(true);
+      try {
+         const response = await fetch(`/api/media/${id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+         });
+
+         if (response.ok) {
+            // Remove from local state
+            setMediaItems((prev) => prev.filter((item) => item.id !== id));
+            setSelectedItems((prev) => {
+               const newSet = new Set(prev);
+               newSet.delete(String(id));
+               return newSet;
+            });
+            
+            // Close preview if deleted item is selected
+            if (selectedMedia?.id === id) {
+               setShowPreview(false);
+               setSelectedMedia(null);
+            }
+            
+            alert('Gambar berhasil dihapus!');
+         } else {
+            const error = await response.json();
+            alert('Error: ' + (error.error || 'Gagal menghapus gambar'));
+         }
+      } catch (error) {
+         alert('Error: Gagal menghapus gambar');
+      } finally {
+         setDeleting(false);
+      }
+   };
+
+   const handleBulkDelete = async () => {
+      if (selectedItems.size === 0) {
+         alert('Pilih gambar terlebih dahulu');
+         return;
+      }
+
+      if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedItems.size} gambar?`)) {
+         return;
+      }
+
+      setDeleting(true);
+      try {
+         // Delete all selected items
+         const deletePromises = Array.from(selectedItems).map((id) =>
+            fetch(`/api/media/${id}`, {
+               method: 'DELETE',
+               credentials: 'include',
+            })
+         );
+
+         const results = await Promise.allSettled(deletePromises);
+         
+         // Count successes
+         const successCount = results.filter((r) => r.status === 'fulfilled' && r.value.ok).length;
+         const failCount = selectedItems.size - successCount;
+
+         // Remove from local state
+         setMediaItems((prev) => prev.filter((item) => !selectedItems.has(String(item.id))));
+         setSelectedItems(new Set());
+
+         if (failCount === 0) {
+            alert(`${successCount} gambar berhasil dihapus!`);
+         } else {
+            alert(`${successCount} gambar berhasil dihapus, ${failCount} gagal.`);
+         }
+      } catch (error) {
+         alert('Error: Gagal menghapus gambar');
+      } finally {
+         setDeleting(false);
+      }
+   };
+
    return (
       <Card>
          <CardContent className="p-6">
@@ -171,6 +315,23 @@ export default function MediaLibrary() {
                   />
                </div>
                <div className="flex gap-2">
+                  <Button
+                     variant="default"
+                     size="sm"
+                     onClick={() => setShowUploadDialog(true)}
+                  >
+                     Upload Gambar
+                  </Button>
+                  {selectedItems.size > 0 && (
+                     <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        disabled={deleting}
+                     >
+                        Hapus ({selectedItems.size})
+                     </Button>
+                  )}
                   <Button
                      variant={viewMode === 'grid' ? 'default' : 'outline'}
                      size="sm"
@@ -242,7 +403,7 @@ export default function MediaLibrary() {
                      <div
                         key={item.id}
                         className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
-                           selectedItems.has(item.id)
+                           selectedItems.has(String(item.id))
                               ? 'border-blue-500 ring-2 ring-blue-200'
                               : 'border-gray-200 hover:border-blue-300'
                         } ${viewMode === 'list' ? 'flex items-center gap-4 p-3' : ''}`}
@@ -260,7 +421,7 @@ export default function MediaLibrary() {
                               >
                                  <input
                                     type="checkbox"
-                                    checked={selectedItems.has(item.id)}
+                                    checked={selectedItems.has(String(item.id))}
                                     onChange={() => {}}
                                     className="rounded border-input w-5 h-5 cursor-pointer"
                                  />
@@ -290,7 +451,7 @@ export default function MediaLibrary() {
                            <>
                               <input
                                  type="checkbox"
-                                 checked={selectedItems.has(item.id)}
+                                 checked={selectedItems.has(String(item.id))}
                                  onChange={(e) => {
                                     e.stopPropagation();
                                     handleSelectItem(item.id);
@@ -386,14 +547,27 @@ export default function MediaLibrary() {
                            </div>
                         </div>
                         <div className="flex justify-between items-center pt-4 border-t">
-                           <Button
-                              variant="outline"
-                              onClick={() => {
-                                 setShowEditDialog(true);
-                              }}
-                           >
-                              Edit Metadata
-                           </Button>
+                           <div className="flex gap-2">
+                              <Button
+                                 variant="outline"
+                                 onClick={() => {
+                                    setShowEditDialog(true);
+                                 }}
+                              >
+                                 Edit Metadata
+                              </Button>
+                              <Button
+                                 variant="destructive"
+                                 onClick={() => {
+                                    if (selectedMedia) {
+                                       handleDelete(selectedMedia.id);
+                                    }
+                                 }}
+                                 disabled={deleting}
+                              >
+                                 Hapus
+                              </Button>
+                           </div>
                            <div className="flex gap-2">
                               <Button
                                  variant="outline"
@@ -479,6 +653,88 @@ export default function MediaLibrary() {
                      </Button>
                      <Button onClick={handleSaveMetadata} disabled={saving}>
                         {saving ? 'Menyimpan...' : 'Simpan'}
+                     </Button>
+                  </DialogFooter>
+               </DialogContent>
+            </Dialog>
+
+            {/* Upload Dialog */}
+            <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+               <DialogContent>
+                  <DialogHeader>
+                     <DialogTitle>Upload Gambar</DialogTitle>
+                     <DialogDescription>
+                        Upload gambar baru ke media library
+                     </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                     <div>
+                        <Label htmlFor="upload_file">Pilih File Gambar</Label>
+                        <Input
+                           id="upload_file"
+                           type="file"
+                           accept="image/*"
+                           onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                 setUploadFile(file);
+                                 // Create preview
+                                 const reader = new FileReader();
+                                 reader.onloadend = () => {
+                                    setUploadPreview(reader.result as string);
+                                 };
+                                 reader.readAsDataURL(file);
+                              }
+                           }}
+                           className="mt-2 cursor-pointer"
+                        />
+                        {uploadPreview && (
+                           <div className="mt-3">
+                              <img
+                                 src={uploadPreview}
+                                 alt="Preview"
+                                 className="max-w-full h-40 object-contain border border-gray-200 rounded-lg"
+                              />
+                              {uploadFile && (
+                                 <p className="text-xs text-gray-500 mt-2">
+                                    File: {uploadFile.name} ({(uploadFile.size / 1024).toFixed(2)} KB)
+                                 </p>
+                              )}
+                           </div>
+                        )}
+                     </div>
+                     <div>
+                        <Label htmlFor="upload_alt_text">
+                           Deskripsi Gambar (Alt Text) <span className="text-xs text-gray-500 font-normal">(Opsional)</span>
+                        </Label>
+                        <Input
+                           id="upload_alt_text"
+                           type="text"
+                           value={uploadAltText}
+                           onChange={(e) => setUploadAltText(e.target.value)}
+                           placeholder="Contoh: Grafik pertumbuhan ekonomi Q4 2024"
+                           className="mt-2 text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                           Jelaskan gambar untuk aksesibilitas dan SEO
+                        </p>
+                     </div>
+                  </div>
+                  <DialogFooter>
+                     <Button
+                        variant="outline"
+                        onClick={() => {
+                           setShowUploadDialog(false);
+                           setUploadFile(null);
+                           setUploadPreview('');
+                           setUploadAltText('');
+                        }}
+                        disabled={uploading}
+                     >
+                        Batal
+                     </Button>
+                     <Button onClick={handleUpload} disabled={uploading || !uploadFile}>
+                        {uploading ? 'Mengupload...' : 'Upload'}
                      </Button>
                   </DialogFooter>
                </DialogContent>

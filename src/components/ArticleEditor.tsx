@@ -6,6 +6,7 @@ import Image from '@tiptap/extension-image';
 import Link from '@tiptap/extension-link';
 import { Dropcursor } from '@tiptap/extension-dropcursor';
 import MenuBar from './MenuBar';
+import MediaLibrary from './MediaLibrary';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
@@ -17,14 +18,16 @@ interface ArticleEditorProps {
    className?: string;
 }
 
-export default function ArticleEditor({ content = '', onChange, placeholder = 'Mulai menulis artikel Anda di sini...', className = '', id }: ArticleEditorProps) {
+export default function ArticleEditor({ content = '', onChange, placeholder = 'Mulai menulis artikel Anda di sini...', className = '' }: ArticleEditorProps) {
    const [showImageDialog, setShowImageDialog] = useState(false);
+   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
    const [isEditingImage, setIsEditingImage] = useState(false);
    const [imageUrl, setImageUrl] = useState('');
    const [imageFile, setImageFile] = useState<File | null>(null);
    const [imagePreview, setImagePreview] = useState<string>('');
    const [imageUploadMethod, setImageUploadMethod] = useState<'url' | 'file'>('url');
    const [imageAlt, setImageAlt] = useState('');
+   const [imageDescription, setImageDescription] = useState('');
    const [showLinkDialog, setShowLinkDialog] = useState(false);
    const [linkUrl, setLinkUrl] = useState('');
    const [linkText, setLinkText] = useState('');
@@ -86,6 +89,18 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
                         }
                         return {
                            'data-align': attributes['data-align'],
+                        };
+                     },
+                  },
+                  'data-description': {
+                     default: null,
+                     parseHTML: (element) => element.getAttribute('data-description'),
+                     renderHTML: (attributes) => {
+                        if (!attributes['data-description']) {
+                           return {};
+                        }
+                        return {
+                           'data-description': attributes['data-description'],
                         };
                      },
                   },
@@ -170,12 +185,100 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
       },
    });
 
+   // Listen for selection from Media Library and insert into editor
+   useEffect(() => {
+      const handler = (e: Event) => {
+         const custom = e as CustomEvent<{ url: string }>;
+         const url = custom.detail?.url;
+         if (!url || !editor) return;
+
+         // If image dialog is open and we're not editing existing, insert directly
+         editor.chain().focus().setImage({ src: url }).run();
+
+         setImageUrl(url);
+         setShowMediaLibrary(false);
+         setShowImageDialog(false);
+      };
+
+      if (typeof window !== 'undefined') {
+         window.addEventListener('mediaLibrarySelect', handler as EventListener);
+      }
+      return () => {
+         if (typeof window !== 'undefined') {
+            window.removeEventListener('mediaLibrarySelect', handler as EventListener);
+         }
+      };
+   }, [editor]);
+
    // Update editor content when prop changes
    useEffect(() => {
       if (editor && content !== editor.getHTML()) {
          editor.commands.setContent(content);
       }
    }, [content, editor]);
+
+   // Add description elements below images with data-description attribute
+   useEffect(() => {
+      if (!editor) return;
+
+      const addImageDescriptions = () => {
+         const editorElement = editor.view.dom;
+         if (!editorElement) return;
+
+         // Find all images with data-description
+         const images = editorElement.querySelectorAll('img[data-description]');
+
+         images.forEach((img) => {
+            const imgElement = img as HTMLImageElement;
+            const description = imgElement.getAttribute('data-description');
+
+            if (!description) return;
+
+            // Check if description already exists
+            const existingDesc = imgElement.nextElementSibling;
+            if (existingDesc && existingDesc.classList.contains('image-description')) {
+               // Update existing description
+               existingDesc.textContent = description;
+               return;
+            }
+
+            // Create description element
+            const descElement = document.createElement('div');
+            descElement.className = 'image-description';
+            descElement.textContent = description;
+            descElement.style.marginTop = '-1em';
+            descElement.style.paddingTop = '0';
+            descElement.style.paddingBottom = '0.5em';
+            descElement.style.borderBottom = '1px solid #e5e7eb';
+            descElement.style.fontSize = '12px';
+            descElement.style.lineHeight = '1.2';
+            descElement.style.color = '#6b7280';
+
+            // Insert after image (remove any whitespace)
+            const nextSibling = imgElement.nextSibling;
+            if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE && nextSibling.textContent?.trim() === '') {
+               imgElement.parentNode?.removeChild(nextSibling);
+            }
+            imgElement.parentNode?.insertBefore(descElement, imgElement.nextSibling);
+         });
+      };
+
+      // Run on update
+      const handleUpdate = () => {
+         setTimeout(addImageDescriptions, 0);
+      };
+
+      editor.on('update', handleUpdate);
+      editor.on('create', handleUpdate);
+
+      // Initial run
+      setTimeout(addImageDescriptions, 100);
+
+      return () => {
+         editor.off('update', handleUpdate);
+         editor.off('create', handleUpdate);
+      };
+   }, [editor]);
 
    // Memoize the provider value to avoid unnecessary re-renders
    const providerValue = useMemo(() => ({ editor }), [editor]);
@@ -202,6 +305,7 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
                         setIsEditingImage(true);
                         setImageUrl(node.attrs.src || '');
                         setImageAlt(node.attrs.alt || '');
+                        setImageDescription(node.attrs['data-description'] || '');
                         setImageUploadMethod('url'); // Always show URL mode for editing
                         setShowImageDialog(true);
                      } else {
@@ -209,6 +313,7 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
                         setIsEditingImage(false);
                         setImageUrl('');
                         setImageAlt('');
+                        setImageDescription('');
                         setImageUploadMethod('url');
                         setShowImageDialog(true);
                      }
@@ -337,6 +442,31 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
             border-radius: 0.5rem;
             margin: 1rem 0;
             cursor: default;
+         }
+         
+         .tiptap-editor .ProseMirror img[data-description] {
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
+         }
+         
+         /* Image with description */
+         .tiptap-editor .ProseMirror .image-with-description {
+            display: block;
+            margin: 1rem 0;
+         }
+         
+         .tiptap-editor .ProseMirror .image-description {
+            font-size: 12px !important;
+            line-height: 1.2 !important;
+            color: #6b7280;
+            margin-top: -1em !important;
+            margin-bottom: 1rem;
+            padding-top: 0 !important;
+            padding-bottom: 0.5em !important;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: center;
+            font-style: italic;
+            display: block;
          }
          
          /* Resizable Image Handles */
@@ -582,6 +712,7 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
                   setImageFile(null);
                   setImagePreview('');
                   setImageAlt('');
+                  setImageDescription('');
                   setImageUploadMethod('url');
                   setIsEditingImage(false);
                }
@@ -610,6 +741,9 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
                         >
                            Upload File
                         </button>
+                        <button type="button" onClick={() => setShowMediaLibrary(true)} className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
+                           Pilih dari Media Library
+                        </button>
                      </div>
                   )}
 
@@ -637,6 +771,13 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
                            </label>
                            <Input type="text" value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Contoh: Grafik pertumbuhan ekonomi Q4 2024" className="text-sm" />
                            <p className="text-xs text-gray-500 mt-1">Jelaskan gambar untuk aksesibilitas dan SEO</p>
+                        </div>
+                        <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Deskripsi Gambar <span className="text-xs text-gray-500 font-normal">(Opsional)</span>
+                           </label>
+                           <Input type="text" value={imageDescription} onChange={(e) => setImageDescription(e.target.value)} placeholder="Deskripsi yang akan ditampilkan di bawah gambar" className="text-sm" />
+                           <p className="text-xs text-gray-500 mt-1">Deskripsi akan ditampilkan di bawah gambar dengan teks kecil</p>
                         </div>
                      </div>
                   ) : (
@@ -678,6 +819,13 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
                            <Input type="text" value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Contoh: Grafik pertumbuhan ekonomi Q4 2024" className="text-sm" />
                            <p className="text-xs text-gray-500 mt-1">Jelaskan gambar untuk aksesibilitas dan SEO</p>
                         </div>
+                        <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Deskripsi Gambar <span className="text-xs text-gray-500 font-normal">(Opsional)</span>
+                           </label>
+                           <Input type="text" value={imageDescription} onChange={(e) => setImageDescription(e.target.value)} placeholder="Deskripsi yang akan ditampilkan di bawah gambar" className="text-sm" />
+                           <p className="text-xs text-gray-500 mt-1">Deskripsi akan ditampilkan di bawah gambar dengan teks kecil</p>
+                        </div>
                      </div>
                   )}
                </div>
@@ -691,6 +839,7 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
                         setImageFile(null);
                         setImagePreview('');
                         setImageAlt('');
+                        setImageDescription('');
                         setImageUploadMethod('url');
                      }}
                   >
@@ -707,38 +856,100 @@ export default function ArticleEditor({ content = '', onChange, placeholder = 'M
                               .updateAttributes('image', {
                                  src: imageUrl,
                                  alt: imageAlt || undefined,
-                              })
+                                 'data-description': imageDescription || undefined,
+                              } as any)
                               .run();
                            setShowImageDialog(false);
                            setImageUrl('');
                            setImageAlt('');
+                           setImageDescription('');
                            setIsEditingImage(false);
                         } else if (imageUploadMethod === 'url' && imageUrl.trim()) {
                            // Insert new image from URL
                            editor
                               .chain()
                               .focus()
-                              .setImage({ src: imageUrl, alt: imageAlt || undefined })
+                              .setImage({
+                                 src: imageUrl,
+                                 alt: imageAlt || undefined,
+                              } as any)
                               .run();
+                           // Update description attribute separately after a short delay
+                           if (imageDescription) {
+                              setTimeout(() => {
+                                 const { state } = editor;
+                                 const { selection } = state;
+                                 const node = state.doc.nodeAt(selection.from);
+                                 if (node?.type.name === 'image') {
+                                    editor
+                                       .chain()
+                                       .focus()
+                                       .updateAttributes('image', {
+                                          'data-description': imageDescription,
+                                       } as any)
+                                       .run();
+                                 }
+                              }, 10);
+                           }
                            setShowImageDialog(false);
                            setImageUrl('');
                            setImageAlt('');
+                           setImageDescription('');
                         } else if (imageUploadMethod === 'file' && imagePreview) {
                            // Insert new image from file
                            editor
                               .chain()
                               .focus()
-                              .setImage({ src: imagePreview, alt: imageAlt || undefined })
+                              .setImage({
+                                 src: imagePreview,
+                                 alt: imageAlt || undefined,
+                              } as any)
                               .run();
+                           // Update description attribute separately after a short delay
+                           if (imageDescription) {
+                              setTimeout(() => {
+                                 const { state } = editor;
+                                 const { selection } = state;
+                                 const node = state.doc.nodeAt(selection.from);
+                                 if (node?.type.name === 'image') {
+                                    editor
+                                       .chain()
+                                       .focus()
+                                       .updateAttributes('image', {
+                                          'data-description': imageDescription,
+                                       } as any)
+                                       .run();
+                                 }
+                              }, 10);
+                           }
                            setShowImageDialog(false);
                            setImageFile(null);
                            setImagePreview('');
                            setImageAlt('');
+                           setImageDescription('');
                         }
                      }}
                      disabled={isEditingImage ? !imageUrl.trim() : (imageUploadMethod === 'url' && !imageUrl.trim()) || (imageUploadMethod === 'file' && !imagePreview)}
                   >
                      {isEditingImage ? 'Update' : 'Insert'}
+                  </Button>
+               </DialogFooter>
+            </DialogContent>
+         </Dialog>
+
+         {/* Media Library Modal for picking existing images or uploading */}
+         <Dialog open={showMediaLibrary} onOpenChange={setShowMediaLibrary}>
+            <DialogContent className="max-w-5xl">
+               <DialogHeader>
+                  <DialogTitle>Pilih Gambar dari Media Library</DialogTitle>
+                  <DialogDescription>Gunakan gambar yang sudah diupload atau upload baru</DialogDescription>
+               </DialogHeader>
+               <div className="mt-2">
+                  <MediaLibrary />
+               </div>
+               <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setShowMediaLibrary(false)}>
+                     Tutup
                   </Button>
                </DialogFooter>
             </DialogContent>

@@ -1,5 +1,6 @@
 ---
 import { Image } from 'astro:assets';
+import UserMenu from '../components/UserMenu';
 import logo from '../assets/logo.png';
 
 interface Props {
@@ -66,49 +67,32 @@ const { title = 'Dashboard', email = '' } = Astro.props;
 							</div>
 						</a>
 
-						<a href="/dashboard/news" class="nav-item">
-							<div class="flex items-center">
-								<div class="nav-icon-wrapper">
-									<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
-									</svg>
-								</div>
-								<span class="nav-text">Berita</span>
-							</div>
-						</a>
 
-						<a href="/dashboard/users" class="nav-item">
-							<div class="flex items-center">
-								<div class="nav-icon-wrapper">
-									<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-									</svg>
-								</div>
-								<span class="nav-text">Users</span>
-							</div>
-						</a>
 
-						<a href="/dashboard/categories" class="nav-item">
-							<div class="flex items-center">
-								<div class="nav-icon-wrapper">
-									<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-									</svg>
-								</div>
-								<span class="nav-text">Categories</span>
-							</div>
-						</a>
+						
 
-					<a href="/dashboard/tags" class="nav-item">
-						<div class="flex items-center">
-							<div class="nav-icon-wrapper">
-								<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-								</svg>
+					<!-- Group: Taxonomy (Categories + Tags) -->
+					<div class="relative">
+						<details class="group">
+							<summary class="nav-item cursor-pointer list-none">
+								<div class="flex items-center justify-between w-full">
+									<div class="flex items-center">
+										<div class="nav-icon-wrapper">
+											<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"></path>
+											</svg>
+										</div>
+										<span class="nav-text">Taksonomi</span>
+									</div>
+									<svg class="w-4 h-4 text-white/80 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
+								</div>
+							</summary>
+							<div class="ml-10 mt-1 space-y-1">
+								<a href="/dashboard/categories" class="block px-3 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg text-sm">Categories</a>
+								<a href="/dashboard/tags" class="block px-3 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg text-sm">Tags</a>
 							</div>
-							<span class="nav-text">Tags</span>
-						</div>
-					</a>
+						</details>
+					</div>
 
 					<a href="/dashboard/media" class="nav-item">
 						<div class="flex items-center">
@@ -121,53 +105,12 @@ const { title = 'Dashboard', email = '' } = Astro.props;
 						</div>
 					</a>
 
-					<a href="/dashboard/settings" class="nav-item">
-							<div class="flex items-center">
-								<div class="nav-icon-wrapper">
-									<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-									</svg>
-								</div>
-								<span class="nav-text">Settings</span>
-							</div>
-						</a>
+				
 					</nav>
 
-					<!-- User Section & Sign Out -->
+					<!-- User Section & Sign Out (React island) -->
 					<div class="relative px-4 py-5 border-t border-white border-opacity-10 backdrop-blur-sm bg-white bg-opacity-5">
-						<!-- User Profile Card -->
-						<div class="mb-4 p-3 rounded-xl bg-white bg-opacity-10 backdrop-blur-md border border-white border-opacity-20 hover:bg-opacity-15 transition-all duration-300">
-							<div class="flex items-center">
-								<div class="flex-shrink-0">
-									<div class="relative">
-										<div class="w-12 h-12 bg-gradient-to-br from-blue-300 to-blue-500 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white ring-opacity-30">
-											<span class="text-lg font-bold text-white">
-												{email ? email.charAt(0).toUpperCase() : 'A'}
-											</span>
-										</div>
-										<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
-									</div>
-								</div>
-								<div class="ml-3 flex-1 min-w-0">
-									<p class="text-sm font-semibold text-white truncate">{email || 'Admin'}</p>
-									<p class="text-xs text-blue-200 truncate font-medium">Administrator</p>
-								</div>
-							</div>
-						</div>
-						
-						<!-- Sign Out Button -->
-						<form action="/api/auth/signout" class="w-full">
-							<button 
-								type="submit"
-								class="w-full inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
-							>
-								<svg class="w-4 h-4 mr-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-								</svg>
-								Sign out
-							</button>
-						</form>
+						<UserMenu email={email} client:load />
 					</div>
 				</div>
 			</aside>
@@ -362,4 +305,6 @@ const { title = 'Dashboard', email = '' } = Astro.props;
 	.nav-item:nth-child(4) { animation-delay: 0.4s; }
 	.nav-item:nth-child(5) { animation-delay: 0.5s; }
 </style>
+
+
 

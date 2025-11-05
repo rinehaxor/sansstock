@@ -141,3 +141,119 @@ export const PUT: APIRoute = async (context) => {
    }
 };
 
+// DELETE /api/media/[id] - Delete media file and metadata
+export const DELETE: APIRoute = async (context) => {
+   // Get authenticated Supabase client
+   const authenticatedClient = await getAuthenticatedSupabase(context);
+   if (!authenticatedClient) {
+      return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
+         status: 401,
+         headers: { 'Content-Type': 'application/json' },
+      });
+   }
+
+   // Check if user is admin
+   const admin = await isAdmin(context);
+   if (!admin) {
+      return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
+         status: 403,
+         headers: { 'Content-Type': 'application/json' },
+      });
+   }
+
+   try {
+      const id = context.params.id;
+      if (!id) {
+         return new Response(JSON.stringify({ error: 'Media ID is required' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+         });
+      }
+
+      // First, try to get metadata to find file_path
+      let filePath: string | null = null;
+
+      // Check if ID is a number (from database)
+      const numericId = parseInt(id);
+      if (!isNaN(numericId) && numericId.toString() === id) {
+         // ID is a valid integer, try to get metadata from database
+         const { data: metadata } = await authenticatedClient
+            .from('media_metadata')
+            .select('file_path')
+            .eq('id', numericId)
+            .maybeSingle();
+
+         if (metadata) {
+            filePath = metadata.file_path;
+         }
+      } else {
+         // Try using ID as file_path directly
+         filePath = id;
+      }
+
+      // If we still don't have file_path, try to query by file_path
+      if (!filePath) {
+         const { data: metadata } = await authenticatedClient
+            .from('media_metadata')
+            .select('file_path')
+            .eq('file_path', id)
+            .maybeSingle();
+
+         if (metadata) {
+            filePath = metadata.file_path;
+         }
+      }
+
+      // Delete file from storage if we have file_path
+      if (filePath) {
+         const { error: storageError } = await authenticatedClient.storage
+            .from('article-thumbnails')
+            .remove([filePath]);
+
+         if (storageError) {
+            console.error('Error deleting file from storage:', storageError);
+            // Continue with metadata deletion even if storage deletion fails
+         }
+      }
+
+      // Delete metadata from database (order: .delete().eq(...))
+      let deleteBuilder = authenticatedClient.from('media_metadata').delete();
+
+      if (!isNaN(numericId) && numericId.toString() === id) {
+         deleteBuilder = deleteBuilder.eq('id', numericId);
+      } else if (filePath) {
+         deleteBuilder = deleteBuilder.eq('file_path', filePath);
+      } else {
+         deleteBuilder = deleteBuilder.eq('file_path', id);
+      }
+
+      const { error: deleteError } = await deleteBuilder;
+
+      if (deleteError) {
+         return new Response(JSON.stringify({ error: deleteError.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+         });
+      }
+
+      return new Response(
+         JSON.stringify({
+            success: true,
+            message: 'Media deleted successfully',
+         }),
+         {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+         }
+      );
+   } catch (error) {
+      return new Response(
+         JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
+         {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+         }
+      );
+   }
+};
+

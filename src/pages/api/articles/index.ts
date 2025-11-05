@@ -26,6 +26,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 				status,
 				published_at,
 				created_at,
+				featured,
 				categories:category_id (
 					id,
 					name,
@@ -116,7 +117,7 @@ export const POST: APIRoute = async (context) => {
 
    try {
       const body = await context.request.json();
-      const { title, slug, summary, content, thumbnail_url, thumbnail_alt, category_id, source_id, status = 'draft', tag_ids = [], url_original } = body;
+      const { title, slug, summary, meta_title, meta_description, meta_keywords, content, thumbnail_url, thumbnail_alt, category_id, source_id, status = 'draft', tag_ids = [], url_original, featured = false } = body;
 
       // Validation
       if (!title || !slug || !content || !category_id) {
@@ -133,6 +134,9 @@ export const POST: APIRoute = async (context) => {
             title,
             slug,
             summary,
+            meta_title: meta_title || null,
+            meta_description: meta_description || null,
+            meta_keywords: meta_keywords || null,
             content,
             thumbnail_url,
             thumbnail_alt: thumbnail_alt || null,
@@ -140,6 +144,7 @@ export const POST: APIRoute = async (context) => {
             source_id,
             status,
             url_original,
+            featured,
             created_by: user.id,
             updated_by: user.id,
             published_at: status === 'published' ? new Date().toISOString() : null,
@@ -162,6 +167,19 @@ export const POST: APIRoute = async (context) => {
          }));
 
          await authenticatedClient.from('article_tags').insert(articleTags);
+      }
+
+      // Update media_metadata with thumbnail_alt if thumbnail_url and thumbnail_alt are provided
+      if (thumbnail_url && thumbnail_alt) {
+         try {
+            await authenticatedClient
+               .from('media_metadata')
+               .update({ alt_text: thumbnail_alt })
+               .eq('file_url', thumbnail_url);
+         } catch (metadataError) {
+            // Non-critical error, just log it
+            console.error('Failed to update media metadata:', metadataError);
+         }
       }
 
       return new Response(JSON.stringify({ data: article }), {

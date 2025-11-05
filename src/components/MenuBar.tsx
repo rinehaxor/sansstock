@@ -46,6 +46,13 @@ export default function MenuBar({ editor, onImageClick, onLinkClick }: MenuBarPr
       editor,
       selector: (ctx) => {
          if (!ctx.editor) return {};
+         
+         // Calculate word and character count
+         const text = ctx.editor.state.doc.textContent;
+         const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+         const characters = text.length;
+         const charactersWithoutSpaces = text.replace(/\s/g, '').length;
+         
          return {
             isBold: ctx.editor.isActive('bold') ?? false,
             canBold: ctx.editor.can().chain().toggleBold().run() ?? false,
@@ -67,6 +74,9 @@ export default function MenuBar({ editor, onImageClick, onLinkClick }: MenuBarPr
             canUndo: ctx.editor.can().chain().undo().run() ?? false,
             canRedo: ctx.editor.can().chain().redo().run() ?? false,
             isLink: ctx.editor.isActive('link') ?? false,
+            wordCount: words,
+            characterCount: characters,
+            characterCountWithoutSpaces: charactersWithoutSpaces,
             // Image alignment state
             hasSelectedImage: (() => {
                try {
@@ -389,7 +399,7 @@ export default function MenuBar({ editor, onImageClick, onLinkClick }: MenuBarPr
          </div>
 
          {/* Undo/Redo */}
-         <div className="flex items-center gap-1">
+         <div className="flex items-center gap-1 border-r border-gray-300 pr-2">
             <button
                type="button"
                onClick={(e) => {
@@ -418,6 +428,16 @@ export default function MenuBar({ editor, onImageClick, onLinkClick }: MenuBarPr
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
                </svg>
             </button>
+         </div>
+
+         {/* Word/Character Count */}
+         <div className="flex items-center gap-2 ml-auto text-xs text-gray-600">
+            <span className="px-2 py-1 bg-gray-100 rounded" title="Word Count">
+               {editorState.wordCount?.toLocaleString() || 0} kata
+            </span>
+            <span className="px-2 py-1 bg-gray-100 rounded" title="Character Count">
+               {editorState.characterCount?.toLocaleString() || 0} karakter
+            </span>
          </div>
       </div>
    );
