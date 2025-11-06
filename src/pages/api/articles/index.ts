@@ -27,6 +27,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 				published_at,
 				created_at,
 				featured,
+				views_count,
 				categories:category_id (
 					id,
 					name,
@@ -67,12 +68,10 @@ export const GET: APIRoute = async ({ request, url }) => {
       return new Response(
          JSON.stringify({
             data: data || [],
-            pagination: {
-               page,
-               limit,
-               total: totalCount || 0,
-               totalPages: Math.ceil((totalCount || 0) / limit),
-            },
+            total: totalCount || 0,
+            page,
+            limit,
+            totalPages: Math.ceil((totalCount || 0) / limit),
          }),
          {
             status: 200,

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import ArticleEditor from './ArticleEditor';
 
 interface ArticleFormProps {
@@ -131,15 +132,17 @@ export default function ArticleForm({ mode = 'create', articleId, initialArticle
          });
 
          if (response.ok) {
-            alert(mode === 'edit' ? 'Artikel berhasil diperbarui!' : 'Artikel berhasil dibuat!');
-            window.location.href = '/dashboard/articles';
+            toast.success(mode === 'edit' ? 'Artikel berhasil diperbarui!' : 'Artikel berhasil dibuat!');
+            setTimeout(() => {
+               window.location.href = '/dashboard/articles';
+            }, 500);
          } else {
             const error = await response.json();
-            alert('Error: ' + (error.error || (mode === 'edit' ? 'Gagal memperbarui artikel' : 'Gagal membuat artikel')));
+            toast.error(error.error || (mode === 'edit' ? 'Gagal memperbarui artikel' : 'Gagal membuat artikel'));
             setIsSubmitting(false);
          }
       } catch (error) {
-         alert('Error: ' + (mode === 'edit' ? 'Gagal memperbarui artikel' : 'Gagal membuat artikel'));
+         toast.error(mode === 'edit' ? 'Gagal memperbarui artikel' : 'Gagal membuat artikel');
          setIsSubmitting(false);
       }
    };

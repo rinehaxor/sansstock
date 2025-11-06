@@ -1,0 +1,49 @@
+---
+import Layout from '../layouts/Layout.astro';
+import FAQ from '../components/FAQ.astro';
+
+const siteUrl = Astro.site?.href || 'http://localhost:4321';
+const pageUrl = `${siteUrl}/faq`;
+---
+
+<Layout 
+  title="Pertanyaan yang Sering Diajukan - SansStocks"
+  description="Temukan jawaban untuk pertanyaan umum seputar investasi saham, pasar modal, dan ekonomi di SansStocks."
+  keywords="FAQ investasi, pertanyaan saham, panduan investasi, tanya jawab pasar modal"
+>
+  <Fragment slot="head">
+    {/* Robots Meta */}
+    <meta name="robots" content="index, follow" />
+    
+    {/* Open Graph */}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pertanyaan yang Sering Diajukan - SansStocks" />
+    <meta property="og:description" content="Temukan jawaban untuk pertanyaan umum seputar investasi saham, pasar modal, dan ekonomi." />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:site_name" content="SansStocks" />
+    <meta property="og:locale" content="id_ID" />
+    
+    {/* Canonical URL */}
+    <link rel="canonical" href={pageUrl} />
+  </Fragment>
+
+  <main class="min-h-screen bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Header */}
+      <div class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          Pertanyaan yang Sering Diajukan
+        </h1>
+        <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+          Temukan jawaban untuk pertanyaan umum seputar investasi saham, pasar modal, dan ekonomi
+        </p>
+      </div>
+
+      {/* FAQ Content */}
+      <div class="bg-white rounded-xl p-8 shadow-sm">
+        <FAQ />
+      </div>
+    </div>
+  </main>
+</Layout>
+

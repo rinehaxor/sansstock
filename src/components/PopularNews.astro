@@ -2,8 +2,13 @@
 import { Image } from 'astro:assets';
 import { supabase } from '../db/supabase';
 
-// Fetch popular articles (most recent published, limit 5)
+// Fetch random articles from last 7 days
 const currentArticleId = Astro.props.currentArticleId || null;
+
+// Calculate date 7 days ago
+const sevenDaysAgo = new Date();
+sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+const sevenDaysAgoISO = sevenDaysAgo.toISOString();
 
 let query = supabase
    .from('articles')
@@ -12,17 +17,33 @@ let query = supabase
       title,
       slug,
       thumbnail_url,
-      published_at
+      published_at,
+      views_count
    `)
    .eq('status', 'published')
-   .order('published_at', { ascending: false })
-   .limit(5);
+   .gte('published_at', sevenDaysAgoISO) // Only articles published in last 7 days
+   .order('views_count', { ascending: false, nullsFirst: false }) // Order by views_count descending
+   .limit(10); // Get top 10 by views, then randomize from them
 
 if (currentArticleId) {
    query = query.neq('id', currentArticleId);
 }
 
-const { data: popularArticles } = await query;
+const { data: articles } = await query;
+
+// Shuffle and take 5 random articles from popular ones
+function shuffleArray<T>(array: T[]): T[] {
+   const shuffled = [...array];
+   for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+   }
+   return shuffled;
+}
+
+const popularArticles = articles && articles.length > 0 
+   ? shuffleArray(articles).slice(0, 5)
+   : [];
 
 // Helper function untuk get alt text dari media_metadata
 async function getAltText(thumbnailUrl: string | null): Promise<string | null> {
@@ -97,11 +118,21 @@ function getTimeAgo(dateString: string): string {
 							<h4 class="text-sm font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
 								{article.title}
 							</h4>
-							{article.published_at && (
-								<p class="text-xs text-gray-500 mt-1">
-									{getTimeAgo(article.published_at)}
-								</p>
-							)}
+							<div class="flex items-center gap-2 mt-1">
+								{article.published_at && (
+									<p class="text-xs text-gray-500">
+										{getTimeAgo(article.published_at)}
+									</p>
+								)}
+								{article.views_count !== undefined && article.views_count !== null && article.views_count > 0 && (
+									<>
+										<span class="text-xs text-gray-400">•</span>
+										<p class="text-xs text-gray-500">
+											{article.views_count} dilihat
+										</p>
+									</>
+								)}
+							</div>
 						</div>
 					</div>
 				</a>

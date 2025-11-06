@@ -1,13 +1,5 @@
 import * as React from 'react';
-import {
-   Pagination,
-   PaginationContent,
-   PaginationEllipsis,
-   PaginationItem,
-   PaginationLink,
-   PaginationNext,
-   PaginationPrevious,
-} from './ui/pagination';
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from './ui/pagination';
 
 interface ArticlesPaginationProps {
    currentPage: number;
@@ -17,13 +9,7 @@ interface ArticlesPaginationProps {
    statusFilter: string;
 }
 
-export default function ArticlesPagination({
-   currentPage,
-   totalPages,
-   totalItems,
-   itemsPerPage,
-   statusFilter,
-}: ArticlesPaginationProps) {
+export default function ArticlesPagination({ currentPage, totalPages, totalItems, itemsPerPage, statusFilter }: ArticlesPaginationProps) {
    if (totalPages <= 1) return null;
 
    const generatePaginationItems = () => {
@@ -39,10 +25,7 @@ export default function ArticlesPagination({
       if (startPage > 1) {
          items.push(
             <PaginationItem key="1">
-               <PaginationLink 
-                  href={`?status=${statusFilter}&page=1`} 
-                  isActive={currentPage === 1}
-               >
+               <PaginationLink href={`?status=${statusFilter}&page=1`} isActive={currentPage === 1}>
                   1
                </PaginationLink>
             </PaginationItem>
@@ -59,10 +42,7 @@ export default function ArticlesPagination({
       for (let i = startPage; i <= endPage; i++) {
          items.push(
             <PaginationItem key={i}>
-               <PaginationLink 
-                  href={`?status=${statusFilter}&page=${i}`} 
-                  isActive={currentPage === i}
-               >
+               <PaginationLink href={`?status=${statusFilter}&page=${i}`} isActive={currentPage === i}>
                   {i}
                </PaginationLink>
             </PaginationItem>
@@ -79,10 +59,7 @@ export default function ArticlesPagination({
          }
          items.push(
             <PaginationItem key={totalPages}>
-               <PaginationLink 
-                  href={`?status=${statusFilter}&page=${totalPages}`} 
-                  isActive={currentPage === totalPages}
-               >
+               <PaginationLink href={`?status=${statusFilter}&page=${totalPages}`} isActive={currentPage === totalPages}>
                   {totalPages}
                </PaginationLink>
             </PaginationItem>
@@ -97,24 +74,14 @@ export default function ArticlesPagination({
          <Pagination>
             <PaginationContent>
                <PaginationItem>
-                  <PaginationPrevious 
-                     href={currentPage > 1 ? `?status=${statusFilter}&page=${currentPage - 1}` : undefined}
-                     className={currentPage <= 1 ? 'pointer-events-none opacity-50' : ''}
-                  />
+                  <PaginationPrevious href={currentPage > 1 ? `?status=${statusFilter}&page=${currentPage - 1}` : undefined} className={currentPage <= 1 ? 'pointer-events-none opacity-50' : ''} />
                </PaginationItem>
                {generatePaginationItems()}
                <PaginationItem>
-                  <PaginationNext 
-                     href={currentPage < totalPages ? `?status=${statusFilter}&page=${currentPage + 1}` : undefined}
-                     className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : ''}
-                  />
+                  <PaginationNext href={currentPage < totalPages ? `?status=${statusFilter}&page=${currentPage + 1}` : undefined} className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : ''} />
                </PaginationItem>
             </PaginationContent>
          </Pagination>
-         <div className="mt-4 text-sm text-gray-600 text-center">
-            Menampilkan {((currentPage - 1) * itemsPerPage) + 1} sampai {Math.min(currentPage * itemsPerPage, totalItems)} dari {totalItems} artikel
-         </div>
       </div>
    );
 }
-

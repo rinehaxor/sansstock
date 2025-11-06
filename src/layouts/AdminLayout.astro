@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import UserMenu from '../components/UserMenu';
+import Toaster from '../components/Toaster.tsx';
 import logo from '../assets/logo.png';
 
 interface Props {
@@ -146,7 +147,7 @@ const { title = 'Dashboard', email = '' } = Astro.props;
 					<slot />
 				</main>
 			</div>
-		</div>
+		<Toaster client:load />
 	</body>
 </html>
 

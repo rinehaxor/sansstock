@@ -42,6 +42,17 @@ export const GET: APIRoute = async ({ params }) => {
 			.eq('id', id)
 			.single();
 
+		// Increment view count for published articles (non-blocking)
+		if (data && data.status === 'published') {
+			// Don't await - fire and forget for better performance
+			fetch(`/api/articles/${id}/view`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+			}).catch(() => {
+				// Silently fail - view tracking is not critical
+			});
+		}
+
 		if (error) {
 			return new Response(JSON.stringify({ error: error.message }), {
 				status: error.code === 'PGRST116' ? 404 : 500,

@@ -1,0 +1,158 @@
+---
+interface Asset {
+	name: string;
+	value: string;
+	change: string;
+	changeType: 'positive' | 'negative';
+}
+
+interface Props {
+	assets?: Asset[];
+}
+
+// Default sample data - bisa diganti dengan data dari API
+const defaultAssets: Asset[] = [
+	{ name: 'IHSG', value: '7,234.56', change: '1.20%', changeType: 'positive' },
+	{ name: 'BNB', value: '15,945,827.00', change: '1.10%', changeType: 'positive' },
+	{ name: 'ASTER', value: '18,120.00', change: '6.95%', changeType: 'positive' },
+	{ name: 'USDC', value: '16,707.00', change: '0.14%', changeType: 'negative' },
+	{ name: 'BTC', value: '945,234,000', change: '2.45%', changeType: 'positive' },
+	{ name: 'ETH', value: '45,678,000', change: '-1.23%', changeType: 'negative' },
+];
+
+const { assets = defaultAssets } = Astro.props;
+const itemsPerPage = 3;
+const totalPages = Math.ceil(assets.length / itemsPerPage);
+---
+
+<div class="w-full">
+	<!-- Header -->
+	<div class="flex items-center justify-center mb-6">
+		<div class="flex items-center gap-2 text-gray-600 text-sm">
+			<span>Data Powered By</span>
+			<div class="flex items-center gap-1 font-bold">
+				<span class="text-black">P</span>
+				<span class="bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">INT</span>
+				<span class="text-black">U</span>
+			</div>
+		</div>
+	</div>
+
+	<!-- Market Ticker Container -->
+	<div class="relative">
+		<!-- Carousel Container -->
+		<div 
+			class="overflow-hidden"
+			id="market-ticker-container"
+		>
+			<div 
+				class="flex transition-transform duration-500 ease-in-out"
+				id="market-ticker-slider"
+				style={`width: ${totalPages * 100}%`}
+			>
+				{Array.from({ length: totalPages }).map((_, pageIndex) => {
+					const pageWidth = 100 / totalPages;
+					return (
+						<div class="flex gap-4 px-2 items-stretch" style={`width: ${pageWidth}%`}>
+							{assets.slice(pageIndex * itemsPerPage, (pageIndex + 1) * itemsPerPage).map((asset) => (
+								<div class="flex-1 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 shadow-sm border border-blue-200/50 hover:shadow-md transition-shadow flex flex-col min-h-[140px]">
+									<!-- Asset Name -->
+									<div class="mb-3">
+										<h3 class="text-lg font-semibold text-gray-800">{asset.name}</h3>
+									</div>
+									
+									<!-- Asset Value -->
+									<div class="mb-3 min-h-[3rem] flex items-center">
+										<p class="text-2xl font-bold text-gray-900 truncate">{asset.value}</p>
+									</div>
+									
+									<!-- Change Indicator -->
+									<div class="flex items-center gap-1">
+										{asset.changeType === 'positive' ? (
+											<svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+											</svg>
+										) : (
+											<svg class="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+											</svg>
+										)}
+										<span class={`text-sm font-semibold ${asset.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
+											{asset.change}
+										</span>
+									</div>
+								</div>
+							))}
+						</div>
+					);
+				})}
+			</div>
+		</div>
+
+		<!-- Pagination Dots -->
+		{totalPages > 1 && (
+			<div class="flex justify-center gap-2 mt-6">
+				{Array.from({ length: totalPages }).map((_, index) => (
+					<button
+						type="button"
+						class={`rounded-full transition-all ${index === 0 ? 'bg-gray-700 w-6' : 'bg-gray-300 w-2'} h-2 hover:bg-gray-400`}
+						data-page={index}
+						aria-label={`Go to page ${index + 1}`}
+					></button>
+				))}
+			</div>
+		)}
+	</div>
+</div>
+
+<script define:vars={{ totalPages }}>
+	// Carousel functionality
+	document.addEventListener('DOMContentLoaded', () => {
+		const container = document.getElementById('market-ticker-slider');
+		const dots = document.querySelectorAll('[data-page]');
+		let currentPage = 0;
+
+		if (container && dots.length > 0 && totalPages > 1) {
+			// Update slider position
+			function updateSlider() {
+				if (container) {
+					const pageWidth = 100 / totalPages;
+					const translateX = -(currentPage * pageWidth);
+					container.style.transform = `translateX(${translateX}%)`;
+				}
+				
+				// Update dots
+				dots.forEach((dot, index) => {
+					if (index === currentPage) {
+						dot.classList.remove('bg-gray-300', 'bg-gray-400', 'w-2');
+						dot.classList.add('bg-gray-700', 'w-6');
+					} else {
+						dot.classList.remove('bg-gray-700', 'w-6');
+						dot.classList.add('bg-gray-300', 'w-2');
+					}
+				});
+			}
+
+			// Add click handlers to dots
+			dots.forEach((dot, index) => {
+				dot.addEventListener('click', () => {
+					currentPage = index;
+					updateSlider();
+				});
+			});
+
+			// Auto-play carousel (optional)
+			setInterval(() => {
+				currentPage = (currentPage + 1) % totalPages;
+				updateSlider();
+			}, 5000); // Change slide every 5 seconds
+		}
+	});
+</script>
+
+<style>
+	#market-ticker-slider {
+		display: flex;
+	}
+</style>
+

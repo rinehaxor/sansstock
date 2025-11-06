@@ -1,0 +1,63 @@
+---
+// FAQ Component - Manual FAQ dengan pertanyaan umum
+// Tidak perlu database, cukup hardcoded untuk SEO dan UX
+
+const faqData = [
+  {
+    question: "Apa itu investasi saham?",
+    answer: "Investasi saham adalah kegiatan membeli sebagian kepemilikan (saham) dari suatu perusahaan yang terdaftar di bursa efek. Dengan membeli saham, Anda menjadi pemegang saham dan berhak atas dividen serta potensi capital gain jika harga saham naik."
+  },
+  {
+    question: "Bagaimana cara mulai investasi saham di Indonesia?",
+    answer: "Untuk mulai investasi saham di Indonesia, Anda perlu membuka rekening efek di perusahaan sekuritas yang terdaftar di OJK. Setelah itu, deposit dana ke rekening efek, lalu Anda bisa mulai membeli saham melalui aplikasi trading atau platform online yang disediakan sekuritas."
+  },
+  {
+    question: "Apa perbedaan antara saham dan reksa dana?",
+    answer: "Saham adalah kepemilikan langsung di perusahaan tertentu, sedangkan reksa dana adalah wadah yang mengumpulkan dana dari investor untuk dikelola oleh manajer investasi ke berbagai instrumen seperti saham, obligasi, atau pasar uang. Reksa dana lebih cocok untuk investor pemula karena dikelola profesional."
+  },
+  {
+    question: "Apa itu IHSG (Indeks Harga Saham Gabungan)?",
+    answer: "IHSG adalah indeks yang mengukur performa keseluruhan pasar saham Indonesia. IHSG dihitung berdasarkan harga saham-saham yang terdaftar di Bursa Efek Indonesia (BEI). Kenaikan IHSG menunjukkan kondisi pasar saham yang positif secara umum."
+  },
+  {
+    question: "Bagaimana cara membaca laporan keuangan perusahaan?",
+    answer: "Laporan keuangan terdiri dari Neraca (posisi keuangan), Laporan Laba Rugi (kinerja operasional), dan Laporan Arus Kas. Fokus pada rasio-rasio penting seperti ROE (Return on Equity), Debt to Equity Ratio, dan pertumbuhan pendapatan untuk menilai kesehatan finansial perusahaan."
+  },
+  {
+    question: "Apa risiko investasi saham?",
+    answer: "Risiko utama investasi saham adalah capital loss (kerugian modal) jika harga saham turun, risiko likuiditas (sulit menjual saham), dan risiko perusahaan (kebangkrutan atau penurunan kinerja). Diversifikasi portofolio dan investasi jangka panjang dapat membantu mengurangi risiko."
+  },
+  {
+    question: "Kapan waktu terbaik untuk membeli saham?",
+    answer: "Tidak ada waktu 'terbaik' yang pasti. Prinsip investasi value adalah membeli saat harga di bawah nilai intrinsik. Namun, untuk investor jangka panjang, strategi dollar-cost averaging (investasi rutin) lebih efektif daripada timing the market."
+  },
+  {
+    question: "Apa itu dividen?",
+    answer: "Dividen adalah pembagian keuntungan perusahaan kepada pemegang saham. Dividen biasanya dibayarkan secara berkala (tahunan atau triwulanan) dari laba bersih perusahaan. Tidak semua perusahaan membagikan dividen, beberapa memilih untuk menginvestasikan kembali laba untuk pertumbuhan."
+  }
+];
+---
+
+<div class="space-y-6">
+    {faqData.map((faq) => (
+      <div class="border-b border-gray-200 pb-6 last:border-b-0 last:pb-0">
+        <h3 class="text-lg font-semibold text-gray-900 mb-3">{faq.question}</h3>
+        <p class="text-gray-700 leading-relaxed">{faq.answer}</p>
+      </div>
+    ))}
+  </div>
+</div>
+
+<script type="application/ld+json" set:html={JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqData.map((faq) => ({
+    "@type": "Question",
+    "name": faq.question,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.answer
+    }
+  }))
+})} />
+

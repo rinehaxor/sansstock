@@ -1,6 +1,7 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import Toaster from '../components/Toaster.tsx';
 import '../styles/globals.css';
 
 interface Props {
@@ -37,6 +38,7 @@ const {
 			<slot />
 		</main>
 		<Footer />
+		<Toaster client:load />
 	</body>
 </html>
 

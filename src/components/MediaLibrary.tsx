@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Card, CardContent } from './ui/Card';
 import { Input } from './ui/Input';
 import { Textarea } from './ui/textarea';
@@ -160,12 +161,12 @@ export default function MediaLibrary() {
 
    const copyUrlToClipboard = (url: string) => {
       navigator.clipboard.writeText(url);
-      alert('URL berhasil disalin!');
+      toast.success('URL berhasil disalin!');
    };
 
    const handleUpload = async () => {
       if (!uploadFile) {
-         alert('Pilih file terlebih dahulu');
+         toast.error('Pilih file terlebih dahulu');
          return;
       }
 
@@ -207,13 +208,13 @@ export default function MediaLibrary() {
             setUploadAltText('');
             setShowUploadDialog(false);
             fetchMedia();
-            alert('Gambar berhasil diupload!');
+            toast.success('Gambar berhasil diupload!');
          } else {
             const error = await response.json();
-            alert('Error: ' + (error.error || 'Gagal mengupload gambar'));
+            toast.error(error.error || 'Gagal mengupload gambar');
          }
       } catch (error) {
-         alert('Error: Gagal mengupload gambar');
+         toast.error('Gagal mengupload gambar');
       } finally {
          setUploading(false);
       }
@@ -246,13 +247,13 @@ export default function MediaLibrary() {
                setSelectedMedia(null);
             }
             
-            alert('Gambar berhasil dihapus!');
+            toast.success('Gambar berhasil dihapus!');
          } else {
             const error = await response.json();
-            alert('Error: ' + (error.error || 'Gagal menghapus gambar'));
+            toast.error(error.error || 'Gagal menghapus gambar');
          }
       } catch (error) {
-         alert('Error: Gagal menghapus gambar');
+         toast.error('Gagal menghapus gambar');
       } finally {
          setDeleting(false);
       }
@@ -260,7 +261,7 @@ export default function MediaLibrary() {
 
    const handleBulkDelete = async () => {
       if (selectedItems.size === 0) {
-         alert('Pilih gambar terlebih dahulu');
+         toast.error('Pilih gambar terlebih dahulu');
          return;
       }
 
@@ -289,12 +290,12 @@ export default function MediaLibrary() {
          setSelectedItems(new Set());
 
          if (failCount === 0) {
-            alert(`${successCount} gambar berhasil dihapus!`);
+            toast.success(`${successCount} gambar berhasil dihapus!`);
          } else {
-            alert(`${successCount} gambar berhasil dihapus, ${failCount} gagal.`);
+            toast.error(`${successCount} gambar berhasil dihapus, ${failCount} gagal.`);
          }
       } catch (error) {
-         alert('Error: Gagal menghapus gambar');
+         toast.error('Gagal menghapus gambar');
       } finally {
          setDeleting(false);
       }
