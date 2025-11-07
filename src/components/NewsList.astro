@@ -5,6 +5,7 @@ import { supabase } from '../db/supabase';
 import PopularNews from './PopularNews.astro';
 import AdsWidget from './AdsWidget.astro';
 import NewsListClient from './NewsListClient.tsx';
+import NewsCard from './NewsCard.astro';
 
 // Get page from URL query parameter
 const page = parseInt(Astro.url.searchParams.get('page') || '1');
@@ -80,6 +81,31 @@ const articlesWithAltText = await Promise.all(
 	<div class="grid lg:grid-cols-3 gap-8">
 		<!-- Main News Content -->
 		<div class="lg:col-span-2">
+			<!-- Initial Articles (Server-side rendered with Astro Image) -->
+			<div id="news-list-section" class="space-y-6">
+				{articlesWithAltText && articlesWithAltText.length > 0 ? (
+					articlesWithAltText.map((article: any) => (
+						<NewsCard
+							id={article.id}
+							title={article.title}
+							slug={article.slug}
+							summary={article.summary}
+							thumbnail_url={article.thumbnail_url}
+							thumbnail_alt={article.thumbnail_alt}
+							published_at={article.published_at}
+							created_at={article.created_at}
+							categories={article.categories}
+						/>
+					))
+				) : (
+					<div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+						<p class="text-gray-500 text-lg">Belum ada artikel yang diterbitkan.</p>
+						<p class="text-gray-400 text-sm mt-2">Silakan publikasikan artikel dari dashboard admin.</p>
+					</div>
+				)}
+			</div>
+			
+			<!-- Pagination and Client-side Loading -->
 			<NewsListClient 
 				client:load
 				initialPage={page}
@@ -93,6 +119,17 @@ const articlesWithAltText = await Promise.all(
 		<div class="lg:col-span-1">
 			<PopularNews />
 			<AdsWidget />
+			<!-- Market Ticker Widget -->
+			<div class="mt-6">
+				<iframe
+					title="Market Ticker"
+					src={`https://pintu.co.id/widget/market-ticker?source=${Astro.url.origin}`}
+					width="100%"
+					height="50"
+					style="border:none; border-radius:8px; overflow:hidden;"
+					loading="lazy"
+				></iframe>
+			</div>
 		</div>
 	</div>
 </section>

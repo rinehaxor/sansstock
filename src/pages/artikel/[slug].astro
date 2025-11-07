@@ -74,11 +74,163 @@ function calculateWordCount(content: string): number {
 
 const readingTime = calculateReadingTime(article.content || '');
 const wordCount = calculateWordCount(article.content || '');
-const siteUrl = Astro.site?.href || 'http://localhost:4321';
+// Site URL akan otomatis detect dari environment variable atau request
+const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
 const articleUrl = `${siteUrl}/artikel/${article.slug}`;
 const articleImage = article.thumbnail_url || `${siteUrl}/og-default.jpg`;
 const metaTitle = article.meta_title || article.title;
 const metaDescription = article.meta_description || article.summary || '';
+
+// Function to fetch related articles for BacaJuga widget
+async function getRelatedArticlesForBacaJuga(currentArticleId: number, categoryId: number | null, tagIds: number[]) {
+  let relatedArticles: any[] = [];
+  const usedArticleIds = new Set<number>([currentArticleId]);
+
+  // Strategy 1: Find articles with same category
+  if (categoryId) {
+    const { data: categoryArticles } = await supabase
+      .from('articles')
+      .select('id, title, slug')
+      .eq('status', 'published')
+      .eq('category_id', categoryId)
+      .neq('id', currentArticleId)
+      .order('published_at', { ascending: false })
+      .limit(3);
+    
+    if (categoryArticles) {
+      categoryArticles.forEach((article: any) => {
+        if (!usedArticleIds.has(article.id)) {
+          relatedArticles.push(article);
+          usedArticleIds.add(article.id);
+        }
+      });
+    }
+  }
+
+  // Strategy 2: Find articles with same tags
+  if (tagIds.length > 0 && relatedArticles.length < 3) {
+    const { data: articleTags } = await supabase
+      .from('article_tags')
+      .select('article_id')
+      .in('tag_id', tagIds)
+      .neq('article_id', currentArticleId);
+    
+    const relatedArticleIds = [...new Set(articleTags?.map((at: any) => at.article_id) || [])];
+    const newArticleIds = relatedArticleIds.filter((id: number) => !usedArticleIds.has(id));
+    
+    if (newArticleIds.length > 0) {
+      const { data: tagArticles } = await supabase
+        .from('articles')
+        .select('id, title, slug')
+        .eq('status', 'published')
+        .in('id', newArticleIds.slice(0, 3 - relatedArticles.length))
+        .order('published_at', { ascending: false })
+        .limit(3 - relatedArticles.length);
+      
+      if (tagArticles) {
+        tagArticles.forEach((article: any) => {
+          if (!usedArticleIds.has(article.id) && relatedArticles.length < 3) {
+            relatedArticles.push(article);
+            usedArticleIds.add(article.id);
+          }
+        });
+      }
+    }
+  }
+
+  // Strategy 3: Fill with latest articles if needed
+  if (relatedArticles.length < 3) {
+    const { data: latestArticles } = await supabase
+      .from('articles')
+      .select('id, title, slug')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(6);
+    
+    if (latestArticles) {
+      latestArticles.forEach((article: any) => {
+        if (!usedArticleIds.has(article.id) && relatedArticles.length < 3) {
+          relatedArticles.push(article);
+          usedArticleIds.add(article.id);
+        }
+      });
+    }
+  }
+
+  return relatedArticles.slice(0, 3);
+}
+
+// Function to escape HTML
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+// Function to generate BacaJuga widget HTML
+function generateBacaJugaHTML(articles: any[]): string {
+  if (!articles || articles.length === 0) return '';
+  
+  // Create 3 columns with dividers
+  const articlesHTML = articles.map((article: any, index: number) => {
+    const isLast = index === articles.length - 1;
+    const divider = !isLast ? '<div class="w-px bg-gray-300 my-1"></div>' : '';
+    
+    return `
+      <div class="flex-1 px-3 min-w-0">
+        <a href="/artikel/${escapeHtml(article.slug)}" class="block text-sm text-gray-900 hover:text-blue-600 transition-colors leading-relaxed underline">
+          ${escapeHtml(article.title)}
+        </a>
+      </div>
+      ${divider}`;
+  }).join('');
+  
+  return `<div class="baca-juga-widget my-8 px-4 pt-2 pb-3 border border-gray-900 rounded-lg bg-white">
+    <h3 class="text-base font-bold text-gray-900 mb-2">Baca Juga</h3>
+    <div class="flex gap-0">
+      ${articlesHTML}
+    </div>
+  </div>`;
+}
+
+// Function to inject BacaJuga widget into content after N paragraphs (only once)
+function injectBacaJugaWidget(content: string, widgetHtml: string, afterParagraph: number = 3): string {
+  if (!content || !widgetHtml) return content || '';
+  
+  // Use regex to find all paragraph tags (including self-closing and with attributes)
+  // Match <p>...</p> patterns, handling various HTML structures
+  const paragraphRegex = /<p[^>]*>[\s\S]*?<\/p>/gi;
+  const matches = [...content.matchAll(paragraphRegex)];
+  
+  // Only inject if we have enough paragraphs and haven't inserted yet
+  if (matches.length < afterParagraph) {
+    // If not enough paragraphs, don't inject
+    return content;
+  }
+  
+  // Insert widget only once after the Nth paragraph (but not after the last paragraph)
+  const targetIndex = afterParagraph - 1; // 0-indexed
+  if (targetIndex < matches.length - 1) {
+    const match = matches[targetIndex];
+    const insertPosition = match.index! + match[0].length;
+    return content.slice(0, insertPosition) + widgetHtml + content.slice(insertPosition);
+  }
+  
+  return content;
+}
+
+// Get tag IDs and fetch related articles
+const tagIds = article.article_tags?.map((at: any) => at.tags?.id).filter(Boolean) || [];
+const relatedArticles = await getRelatedArticlesForBacaJuga(article.id, article.category_id, tagIds);
+const bacaJugaHTML = generateBacaJugaHTML(relatedArticles);
+
+// Inject widget into content (only once, after 3rd paragraph)
+const contentWithWidget = injectBacaJugaWidget(article.content || '', bacaJugaHTML, 3);
 
 // Get alt text - prioritize thumbnail_alt from articles table, then media_metadata
 let thumbnailAltText: string | null = null;
@@ -351,7 +503,7 @@ const tags = allKeywords.join(', ') || '';
 
           {/* Article Content */}
           <div class="prose prose-lg max-w-none bg-white rounded-xl p-8 shadow-sm mb-8">
-            <div set:html={article.content} />
+            <div set:html={contentWithWidget} />
             <ImageDescription client:load />
           </div>
 

@@ -2,7 +2,7 @@
 import { Image } from 'astro:assets';
 import { supabase } from '../db/supabase';
 
-// Fetch random articles from last 7 days
+// Fetch popular articles from last 7 days based on views
 const currentArticleId = Astro.props.currentArticleId || null;
 
 // Calculate date 7 days ago
@@ -23,7 +23,7 @@ let query = supabase
    .eq('status', 'published')
    .gte('published_at', sevenDaysAgoISO) // Only articles published in last 7 days
    .order('views_count', { ascending: false, nullsFirst: false }) // Order by views_count descending
-   .limit(10); // Get top 10 by views, then randomize from them
+   .limit(5); // Get top 5 most viewed articles
 
 if (currentArticleId) {
    query = query.neq('id', currentArticleId);
@@ -31,19 +31,8 @@ if (currentArticleId) {
 
 const { data: articles } = await query;
 
-// Shuffle and take 5 random articles from popular ones
-function shuffleArray<T>(array: T[]): T[] {
-   const shuffled = [...array];
-   for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-   }
-   return shuffled;
-}
-
-const popularArticles = articles && articles.length > 0 
-   ? shuffleArray(articles).slice(0, 5)
-   : [];
+// Get top 5 articles based on views (already ordered by views_count descending)
+const popularArticles = articles && articles.length > 0 ? articles : [];
 
 // Helper function untuk get alt text dari media_metadata
 async function getAltText(thumbnailUrl: string | null): Promise<string | null> {

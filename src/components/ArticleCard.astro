@@ -13,6 +13,7 @@ interface Props {
    isLarge?: boolean;
    thumbnailUrl?: string | null;
    thumbnailAlt?: string | null;
+   eagerLoad?: boolean;
 }
 
 const {
@@ -27,6 +28,7 @@ const {
    isLarge = false,
    thumbnailUrl,
    thumbnailAlt,
+   eagerLoad = false,
 } = Astro.props;
 ---
 
@@ -41,7 +43,7 @@ const {
                width={isLarge ? 800 : 400}
                height={isLarge ? 343 : 225}
                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-               loading={isLarge ? 'eager' : 'lazy'}
+               loading={isLarge || eagerLoad ? 'eager' : 'lazy'}
                format="webp"
             />
             <div class="absolute inset-0 bg-black/20"></div>

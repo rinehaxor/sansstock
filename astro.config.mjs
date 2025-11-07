@@ -1,9 +1,17 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 import react from '@astrojs/react';
+import node from '@astrojs/node';
 
 // https://astro.build/config
 export default defineConfig({
+   // Site URL akan diambil dari environment variable SITE_URL
+   // Jika tidak ada, akan menggunakan fallback atau detect otomatis saat runtime
+   site: import.meta.env.SITE_URL || undefined, // undefined = Astro akan detect otomatis
+   output: 'server',
+   adapter: node({
+      mode: 'standalone',
+   }),
    integrations: [tailwind(), react()],
    image: {
       domains: ['localhost', 'supabase.co', '*.supabase.co'],

@@ -55,9 +55,42 @@ export default function NewsListClient({ initialPage = 1, initialArticles = [], 
             }
             window.history.pushState({ page }, '', url.toString());
 
-            // Scroll to top of news section
+            // Replace content in news-list-section
             const newsSection = document.getElementById('news-list-section');
             if (newsSection) {
+               // Create HTML for articles
+               const articlesHTML = data.map((article: any) => {
+                  const category = article.categories?.name || 'Umum';
+                  const timeAgo = getTimeAgo(article.published_at || article.created_at);
+                  const articleUrl = `/artikel/${article.slug}`;
+                  
+                  return `
+                     <article class="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                        <a href="${articleUrl}" class="flex gap-6">
+                           <div class="flex-shrink-0">
+                              ${article.thumbnail_url ? (
+                                 `<img src="${article.thumbnail_url}" alt="${article.thumbnail_alt || article.title || 'Article thumbnail'}" class="w-48 h-28 rounded-lg object-cover" loading="lazy" />`
+                              ) : (
+                                 `<div class="w-48 h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
+                                    <svg class="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                                    </svg>
+                                 </div>`
+                              )}
+                           </div>
+                           <div class="flex-1 min-w-0">
+                              <h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">${article.title}</h3>
+                              <p class="text-sm text-gray-600 mb-3 line-clamp-2">${article.summary || 'Tidak ada ringkasan tersedia...'}</p>
+                              <p class="text-sm text-blue-600 font-medium">
+                                 ${category} | ${timeAgo}
+                              </p>
+                           </div>
+                        </a>
+                     </article>
+                  `;
+               }).join('');
+               
+               newsSection.innerHTML = articlesHTML;
                newsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
          }
@@ -107,77 +140,39 @@ export default function NewsListClient({ initialPage = 1, initialArticles = [], 
    const offset = (currentPage - 1) * limit;
 
    return (
-      <div id="news-list-section">
-         <div className="space-y-6">
-            {loading ? (
-               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <p className="text-gray-500 text-lg mt-4">Memuat artikel...</p>
-               </div>
-            ) : articles && articles.length > 0 ? (
-               articles.map((article) => {
-                  const category = article.categories?.name || 'Umum';
-                  const categoryColor = getCategoryColor(category);
-                  const timeAgo = getTimeAgo(article.published_at || article.created_at);
-                  const articleUrl = `/artikel/${article.slug}`;
+      <>
+         {/* Loading indicator */}
+         {loading && (
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center mb-6">
+               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+               <p className="text-gray-500 text-lg mt-4">Memuat artikel...</p>
+            </div>
+         )}
 
-                  return (
-                     <article key={article.id} className="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                        <a href={articleUrl} className="flex gap-6">
-                           <div className="flex-shrink-0">
-                              {article.thumbnail_url ? (
-                                 <img src={article.thumbnail_url} alt={article.thumbnail_alt || article.title || 'Article thumbnail'} className="w-48 h-28 rounded-lg object-cover" loading="lazy" />
-                              ) : (
-                                 <div className="w-48 h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
-                                    <svg className="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                       <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth="2"
-                                          d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
-                                       ></path>
-                                    </svg>
-                                 </div>
-                              )}
-                           </div>
-                           <div className="flex-1 min-w-0">
-                              <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">{article.title}</h3>
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{article.summary || 'Tidak ada ringkasan tersedia...'}</p>
-                              <p className="text-sm text-blue-600 font-medium">
-                                 {category} | {timeAgo}
-                              </p>
-                           </div>
-                        </a>
-                     </article>
-                  );
-               })
-            ) : (
-               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                  <p className="text-gray-500 text-lg">Belum ada artikel yang diterbitkan.</p>
-                  <p className="text-gray-400 text-sm mt-2">Silakan publikasikan artikel dari dashboard admin.</p>
-               </div>
-            )}
-         </div>
-
-         {/* Pagination */}
+         {/* Pagination Controls */}
          {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-8">
                {/* Previous Button */}
                <button
                   onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage <= 1}
-                  className={`px-4 py-2 rounded-lg border transition-colors ${currentPage > 1 ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'}`}
+                  disabled={currentPage <= 1 || loading}
+                  className={`px-4 py-2 rounded-lg border transition-colors ${currentPage > 1 && !loading ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'}`}
                >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                   </svg>
                </button>
 
+               {/* Page Info */}
+               <span className="px-4 py-2 text-sm text-gray-700">
+                  Halaman {currentPage} dari {totalPages}
+               </span>
+
                {/* Next Button */}
                <button
                   onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage >= totalPages}
-                  className={`px-4 py-2 rounded-lg border transition-colors ${currentPage < totalPages ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'}`}
+                  disabled={currentPage >= totalPages || loading}
+                  className={`px-4 py-2 rounded-lg border transition-colors ${currentPage < totalPages && !loading ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'}`}
                >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
@@ -185,6 +180,6 @@ export default function NewsListClient({ initialPage = 1, initialArticles = [], 
                </button>
             </div>
          )}
-      </div>
+      </>
    );
 }

@@ -1,0 +1,119 @@
+---
+import { supabase } from '../db/supabase';
+
+const currentArticleId = Astro.props.currentArticleId || null;
+const currentCategoryId = Astro.props.currentCategoryId || null;
+const currentTagIds = Astro.props.currentTagIds || [];
+
+if (!currentArticleId) {
+  return null;
+}
+
+let relatedArticles: any[] = [];
+const usedArticleIds = new Set<number>([currentArticleId]);
+
+// Strategy 1: Find articles with same category
+if (currentCategoryId) {
+  const { data: categoryArticles } = await supabase
+    .from('articles')
+    .select(`
+      id,
+      title,
+      slug,
+      published_at
+    `)
+    .eq('status', 'published')
+    .eq('category_id', currentCategoryId)
+    .neq('id', currentArticleId)
+    .order('published_at', { ascending: false })
+    .limit(3);
+  
+  if (categoryArticles) {
+    categoryArticles.forEach((article: any) => {
+      if (!usedArticleIds.has(article.id)) {
+        relatedArticles.push(article);
+        usedArticleIds.add(article.id);
+      }
+    });
+  }
+}
+
+// Strategy 2: Find articles with same tags (if we have tags)
+if (currentTagIds.length > 0 && relatedArticles.length < 3) {
+  const { data: articleTags } = await supabase
+    .from('article_tags')
+    .select('article_id')
+    .in('tag_id', currentTagIds)
+    .neq('article_id', currentArticleId);
+  
+  const relatedArticleIds = [...new Set(articleTags?.map((at: any) => at.article_id) || [])];
+  const newArticleIds = relatedArticleIds.filter((id: number) => !usedArticleIds.has(id));
+  
+  if (newArticleIds.length > 0) {
+    const { data: tagArticles } = await supabase
+      .from('articles')
+      .select(`
+        id,
+        title,
+        slug,
+        published_at
+      `)
+      .eq('status', 'published')
+      .in('id', newArticleIds.slice(0, 3 - relatedArticles.length))
+      .order('published_at', { ascending: false })
+      .limit(3 - relatedArticles.length);
+    
+    if (tagArticles) {
+      tagArticles.forEach((article: any) => {
+        if (!usedArticleIds.has(article.id) && relatedArticles.length < 3) {
+          relatedArticles.push(article);
+          usedArticleIds.add(article.id);
+        }
+      });
+    }
+  }
+}
+
+// Strategy 3: If still not enough, fill with latest articles
+if (relatedArticles.length < 3) {
+  const { data: latestArticles } = await supabase
+    .from('articles')
+    .select(`
+      id,
+      title,
+      slug,
+      published_at
+    `)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(6);
+  
+  if (latestArticles) {
+    latestArticles.forEach((article: any) => {
+      if (!usedArticleIds.has(article.id) && relatedArticles.length < 3) {
+        relatedArticles.push(article);
+        usedArticleIds.add(article.id);
+      }
+    });
+  }
+}
+
+const uniqueRelatedArticles = relatedArticles.slice(0, 3);
+---
+
+{uniqueRelatedArticles && uniqueRelatedArticles.length > 0 && (
+  <div class="baca-juga-widget my-8 p-4 border border-gray-900 rounded-lg bg-white">
+    <h3 class="text-base font-bold text-gray-900 mb-3">Baca Juga</h3>
+    <div class="space-y-3">
+      {uniqueRelatedArticles.map((article: any) => (
+        <a 
+          href={`/artikel/${article.slug}`}
+          class="block text-sm text-gray-900 hover:text-blue-600 transition-colors leading-relaxed"
+        >
+          {article.title}
+        </a>
+      ))}
+    </div>
+  </div>
+)
+
