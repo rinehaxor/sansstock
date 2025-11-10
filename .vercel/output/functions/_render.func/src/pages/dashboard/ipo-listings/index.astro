@@ -1,0 +1,137 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../db/supabase';
+import IPOListingsTable from '../../../components/IPOListingsTable';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+// Fetch IPO listings with pagination
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 10;
+const search = Astro.url.searchParams.get('search') || '';
+
+let query = supabase
+  .from('ipo_listings')
+  .select(`
+    id,
+    ticker_symbol,
+    company_name,
+    ipo_date,
+    general_sector,
+    specific_sector,
+    shares_offered,
+    total_value,
+    ipo_price,
+    created_at,
+    updated_at,
+    ipo_underwriters:ipo_underwriters (
+      underwriter:underwriters (
+        id,
+        name
+      )
+    )
+  `, { count: 'exact' })
+  .order('ipo_date', { ascending: false })
+  .range((page - 1) * limit, page * limit - 1);
+
+if (search) {
+  query = query.or(`ticker_symbol.ilike.%${search}%,company_name.ilike.%${search}%`);
+}
+
+const { data: ipoListings, error, count } = await query;
+
+const totalPages = count ? Math.ceil(count / limit) : 0;
+---
+
+<AdminLayout title="IPO Listings" email={email}>
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Header -->
+		<div class="mb-8">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-3xl font-bold text-gray-900">Kelola IPO Listings</h1>
+					<p class="mt-2 text-sm text-gray-600">Kelola data IPO dan performa underwriter</p>
+				</div>
+				<div class="flex gap-2">
+					<a 
+						href="/dashboard/ipo-listings/import"
+						class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+					>
+						<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+						</svg>
+						Import Excel
+					</a>
+					<a 
+						href="/dashboard/ipo-listings/new"
+						class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+					>
+						<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+						</svg>
+						Tambah IPO
+					</a>
+				</div>
+			</div>
+		</div>
+
+		<!-- Search -->
+		<div class="mb-4">
+			<form method="get" action="/dashboard/ipo-listings" class="flex gap-2">
+				<input
+					type="text"
+					name="search"
+					value={search}
+					placeholder="Cari berdasarkan ticker atau nama perusahaan..."
+					class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+				/>
+				<button
+					type="submit"
+					class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+				>
+					Cari
+				</button>
+			</form>
+		</div>
+
+		<!-- IPO Listings Table -->
+		<IPOListingsTable 
+			client:load
+			ipoListings={JSON.stringify(ipoListings || [])}
+			currentPage={page}
+			totalPages={totalPages}
+			totalItems={count || 0}
+			itemsPerPage={limit}
+			paginationBaseUrl="/dashboard/ipo-listings"
+		/>
+	</div>
+</AdminLayout>
+

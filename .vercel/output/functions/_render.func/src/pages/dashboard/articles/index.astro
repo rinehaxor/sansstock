@@ -1,0 +1,118 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../db/supabase';
+import ArticlesTable from '../../../components/ArticlesTable';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+// Fetch articles with pagination
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 10;
+const statusFilter = Astro.url.searchParams.get('status') || 'all';
+const search = Astro.url.searchParams.get('search') || '';
+
+let query = supabase
+  .from('articles')
+  .select(`
+    id,
+    title,
+    slug,
+    summary,
+    status,
+    published_at,
+    created_at,
+    featured,
+    views_count,
+    categories:category_id (
+      id,
+      name
+    )
+  `, { count: 'exact' })
+  .order('created_at', { ascending: false })
+  .range((page - 1) * limit, page * limit - 1);
+
+if (statusFilter !== 'all') {
+  query = query.eq('status', statusFilter);
+}
+
+if (search) {
+  query = query.or(`title.ilike.%${search}%,slug.ilike.%${search}%,summary.ilike.%${search}%`);
+}
+
+const { data: articles, error, count } = await query;
+
+const totalPages = count ? Math.ceil(count / limit) : 0;
+
+// Get categories for filter
+const { data: categories } = await supabase
+  .from('categories')
+  .select('id, name')
+  .order('name');
+---
+
+<AdminLayout title="Artikel" email={email}>
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Header -->
+		<div class="mb-8">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-3xl font-bold text-gray-900">Kelola Artikel</h1>
+					<p class="mt-2 text-sm text-gray-600">Buat, edit, dan kelola artikel Anda</p>
+				</div>
+				<a 
+					href="/dashboard/articles/new"
+					class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+				>
+					<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+					</svg>
+					Artikel Baru
+				</a>
+			</div>
+		</div>
+
+		<!-- Articles Table -->
+		<ArticlesTable 
+			client:load
+			articles={JSON.stringify(articles || [])}
+			categories={JSON.stringify(categories || [])}
+			currentPage={page}
+			totalPages={totalPages}
+			totalItems={count || 0}
+			itemsPerPage={limit}
+			paginationBaseUrl="/dashboard/articles"
+			statusFilter={statusFilter}
+		/>
+	</div>
+
+</AdminLayout>
+
+

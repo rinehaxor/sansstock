@@ -1,0 +1,82 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../db/supabase';
+import ArticleForm from '../../../components/ArticleForm.tsx';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+// Fetch categories and tags
+const { data: categories } = await supabase
+  .from('categories')
+  .select('id, name')
+  .order('name');
+
+const { data: sources } = await supabase
+  .from('sources')
+  .select('id, name')
+  .eq('is_active', true)
+  .order('name');
+
+const { data: tags } = await supabase
+  .from('tags')
+  .select('id, name')
+  .order('name');
+---
+
+<AdminLayout title="Artikel Baru" email={email}>
+	<div class="w-full max-w-[95%] xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Header -->
+		<div class="mb-8">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-3xl font-bold text-gray-900">Buat Artikel Baru</h1>
+					<p class="mt-2 text-sm text-gray-600">Isi form di bawah untuk membuat artikel baru</p>
+				</div>
+				<a 
+					href="/dashboard/articles"
+					class="text-sm text-gray-600 hover:text-gray-900"
+				>
+					← Kembali ke Daftar Artikel
+				</a>
+			</div>
+		</div>
+
+		<!-- Form -->
+		<ArticleForm
+			client:load
+			mode="create"
+			categories={categories || []}
+			sources={sources || []}
+			tags={tags || []}
+		/>
+</AdminLayout>
+
+

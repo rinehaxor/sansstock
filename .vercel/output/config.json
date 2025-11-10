@@ -1,0 +1,183 @@
+{
+	"version": 3,
+	"routes": [
+		{
+			"handle": "filesystem"
+		},
+		{
+			"src": "^/_astro/(.*)$",
+			"headers": {
+				"cache-control": "public, max-age=31536000, immutable"
+			},
+			"continue": true
+		},
+		{
+			"src": "^/_server-islands/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/_image/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/articles/([^/]+?)/view/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/articles/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/articles/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/auth/signin/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/auth/signout/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/categories/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/categories/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/ipo-listings/import/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/ipo-listings/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/ipo-listings/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/market/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/media/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/media/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/placeholder(?:/(.*?))?/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/tags/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/tags/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/underwriters/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/upload/thumbnail/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/artikel/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/artikel/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/categories/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/articles/new/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/articles/([^/]+?)/edit/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/articles/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/categories/new/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/categories/([^/]+?)/edit/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/categories/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/ipo-listings/import/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/ipo-listings/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/media/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/tags/new/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/tags/([^/]+?)/edit/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/tags/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/dashboard/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/faq/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/portal/access/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/sitemap\\.xml/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/tags/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/underwriters/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/$",
+			"dest": "_render"
+		}
+	]
+}

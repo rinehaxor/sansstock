@@ -1,0 +1,351 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+
+// Site URL akan otomatis detect dari environment variable atau request
+const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
+const pageUrl = `${siteUrl}/artikel`;
+const pageTitle = 'Artikel Terbaru - SansStocks';
+const pageDescription = 'Temukan analisis mendalam, berita terkini, dan insight terbaru dari dunia ekonomi dan pasar saham Indonesia.';
+const pageImage = `${siteUrl}/logo.png`;
+---
+
+<Layout 
+  title={pageTitle}
+  description={pageDescription}
+  keywords="artikel ekonomi, berita saham, analisis pasar, investasi Indonesia, pasar modal"
+>
+  <Fragment slot="head">
+    {/* Robots Meta */}
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    
+    {/* Open Graph */}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:image" content={pageImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:site_name" content="SansStocks" />
+    <meta property="og:locale" content="id_ID" />
+    
+    {/* Twitter Card */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:image" content={pageImage} />
+    
+    {/* Canonical URL */}
+    <link rel="canonical" href={pageUrl} />
+    
+    {/* Structured Data (JSON-LD) - CollectionPage */}
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      "name": "Artikel Terbaru",
+      "description": pageDescription,
+      "url": pageUrl
+    })} />
+    
+    {/* Structured Data (JSON-LD) - BreadcrumbList */}
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Beranda",
+          "item": siteUrl
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Artikel",
+          "item": pageUrl
+        }
+      ]
+    })} />
+  </Fragment>
+  <main class="min-h-screen bg-gray-50">
+    <!-- Header Section -->
+    <section class="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-16">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="text-center">
+          <h1 class="text-4xl md:text-5xl font-bold mb-4">Artikel Terbaru</h1>
+          <p class="text-xl text-blue-100 max-w-2xl mx-auto">
+            Temukan analisis mendalam, berita terkini, dan insight terbaru dari dunia ekonomi dan pasar saham
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter & Search Section -->
+    <section class="py-8 bg-white border-b">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <!-- Search -->
+          <div class="relative flex-1 max-w-md">
+            <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input 
+              type="text" 
+              placeholder="Cari artikel..." 
+              class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
+            >
+          </div>
+
+          <!-- Filter Buttons -->
+          <div class="flex flex-wrap gap-2">
+            <Badge variant="default" className="cursor-pointer hover:bg-blue-700">Semua</Badge>
+            <Badge variant="outline" className="cursor-pointer hover:bg-gray-100">Ekonomi</Badge>
+            <Badge variant="outline" className="cursor-pointer hover:bg-gray-100">Saham</Badge>
+            <Badge variant="outline" className="cursor-pointer hover:bg-gray-100">Kripto</Badge>
+            <Badge variant="outline" className="cursor-pointer hover:bg-gray-100">Analisis</Badge>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Articles Grid -->
+    <section class="py-12">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Article 1 -->
+          <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="aspect-video bg-gradient-to-br from-blue-500 to-blue-600 rounded-t-lg relative overflow-hidden">
+              <div class="absolute inset-0 bg-black/20"></div>
+              <div class="absolute top-4 left-4">
+                <Badge className="bg-white text-blue-600 hover:bg-white">Ekonomi</Badge>
+              </div>
+              <div class="absolute bottom-4 left-4 text-white">
+                <p class="text-sm opacity-90">2 jam yang lalu</p>
+              </div>
+            </div>
+            <CardHeader>
+              <CardTitle className="group-hover:text-blue-600 transition-colors">
+                Bank Indonesia Pertahankan Suku Bunga Acuan di 6%
+              </CardTitle>
+              <CardDescription>
+                BI memutuskan untuk mempertahankan BI 7-Day Reverse Repo Rate di level 6% untuk periode November 2024...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <div class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                    TE
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium">Tim Editorial</p>
+                    <p class="text-xs text-gray-500">SansStocks</p>
+                  </div>
+                </div>
+                <a href="/artikel/bank-indonesia-suku-bunga" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                  Baca →
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Article 2 -->
+          <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="aspect-video bg-gradient-to-br from-green-500 to-green-600 rounded-t-lg relative overflow-hidden">
+              <div class="absolute inset-0 bg-black/20"></div>
+              <div class="absolute top-4 left-4">
+                <Badge className="bg-white text-green-600 hover:bg-white">Saham</Badge>
+              </div>
+              <div class="absolute bottom-4 left-4 text-white">
+                <p class="text-sm opacity-90">4 jam yang lalu</p>
+              </div>
+            </div>
+            <CardHeader>
+              <CardTitle className="group-hover:text-green-600 transition-colors">
+                IHSG Menguat 0.8% di Sesi Pagi
+              </CardTitle>
+              <CardDescription>
+                Indeks Harga Saham Gabungan (IHSG) menguat 0.8% pada sesi pagi didukung oleh sentimen positif...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <div class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                    AP
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium">Analis Pasar</p>
+                    <p class="text-xs text-gray-500">SansStocks</p>
+                  </div>
+                </div>
+                <a href="/artikel/ihsg-menguat" class="text-green-600 hover:text-green-700 text-sm font-medium">
+                  Baca →
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Article 3 -->
+          <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="aspect-video bg-gradient-to-br from-purple-500 to-purple-600 rounded-t-lg relative overflow-hidden">
+              <div class="absolute inset-0 bg-black/20"></div>
+              <div class="absolute top-4 left-4">
+                <Badge className="bg-white text-purple-600 hover:bg-white">Kripto</Badge>
+              </div>
+              <div class="absolute bottom-4 left-4 text-white">
+                <p class="text-sm opacity-90">6 jam yang lalu</p>
+              </div>
+            </div>
+            <CardHeader>
+              <CardTitle className="group-hover:text-purple-600 transition-colors">
+                Bitcoin Stabil di Level $65,000
+              </CardTitle>
+              <CardDescription>
+                Harga Bitcoin tetap stabil di kisaran $65,000 dengan volume perdagangan yang meningkat signifikan...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <div class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                    KE
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium">Kripto Expert</p>
+                    <p class="text-xs text-gray-500">SansStocks</p>
+                  </div>
+                </div>
+                <a href="/artikel/bitcoin-stabil" class="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                  Baca →
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Article 4 -->
+          <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="aspect-video bg-gradient-to-br from-orange-500 to-orange-600 rounded-t-lg relative overflow-hidden">
+              <div class="absolute inset-0 bg-black/20"></div>
+              <div class="absolute top-4 left-4">
+                <Badge className="bg-white text-orange-600 hover:bg-white">Analisis</Badge>
+              </div>
+              <div class="absolute bottom-4 left-4 text-white">
+                <p class="text-sm opacity-90">1 hari yang lalu</p>
+              </div>
+            </div>
+            <CardHeader>
+              <CardTitle className="group-hover:text-orange-600 transition-colors">
+                Analisis Fundamental Saham Bank BCA
+              </CardTitle>
+              <CardDescription>
+                Tinjauan mendalam terhadap kinerja fundamental PT Bank Central Asia Tbk (BBCA) dengan fokus pada...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <div class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                    AF
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium">Analis Fundamental</p>
+                    <p class="text-xs text-gray-500">SansStocks</p>
+                  </div>
+                </div>
+                <a href="/artikel/analisis-bca" class="text-orange-600 hover:text-orange-700 text-sm font-medium">
+                  Baca →
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Article 5 -->
+          <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="aspect-video bg-gradient-to-br from-red-500 to-red-600 rounded-t-lg relative overflow-hidden">
+              <div class="absolute inset-0 bg-black/20"></div>
+              <div class="absolute top-4 left-4">
+                <Badge className="bg-white text-red-600 hover:bg-white">Ekonomi</Badge>
+              </div>
+              <div class="absolute bottom-4 left-4 text-white">
+                <p class="text-sm opacity-90">2 hari yang lalu</p>
+              </div>
+            </div>
+            <CardHeader>
+              <CardTitle className="group-hover:text-red-600 transition-colors">
+                Inflasi Indonesia Turun ke 2.86% di Oktober
+              </CardTitle>
+              <CardDescription>
+                Badan Pusat Statistik (BPS) melaporkan inflasi Indonesia turun menjadi 2.86% year-on-year di Oktober 2024...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <div class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                    ES
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium">Ekonom Senior</p>
+                    <p class="text-xs text-gray-500">SansStocks</p>
+                  </div>
+                </div>
+                <a href="/artikel/inflasi-oktober" class="text-red-600 hover:text-red-700 text-sm font-medium">
+                  Baca →
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
+          <!-- Article 6 -->
+          <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="aspect-video bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-t-lg relative overflow-hidden">
+              <div class="absolute inset-0 bg-black/20"></div>
+              <div class="absolute top-4 left-4">
+                <Badge className="bg-white text-indigo-600 hover:bg-white">Pasar</Badge>
+              </div>
+              <div class="absolute bottom-4 left-4 text-white">
+                <p class="text-sm opacity-90">3 hari yang lalu</p>
+              </div>
+            </div>
+            <CardHeader>
+              <CardTitle className="group-hover:text-indigo-600 transition-colors">
+                Rupiah Menguat Terhadap Dolar AS
+              </CardTitle>
+              <CardDescription>
+                Nilai tukar rupiah menguat 0.3% terhadap dolar AS di perdagangan pagi ini, didukung oleh aliran modal masuk...
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <div class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-medium text-gray-600">
+                    FA
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium">Forex Analyst</p>
+                    <p class="text-xs text-gray-500">SansStocks</p>
+                  </div>
+                </div>
+                <a href="/artikel/rupiah-menguat" class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+                  Baca →
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <!-- Load More Button -->
+        <div class="text-center mt-12">
+          <button class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-colors duration-200">
+            Muat Lebih Banyak
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+</Layout>
