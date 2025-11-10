@@ -1,0 +1,94 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../db/supabase';
+import IPOImportForm from '../../../components/IPOImportForm';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+const exampleJson = `[
+  {
+    "ticker_symbol": "FAPA",
+    "company_name": "PT FAP Agri Tbk",
+    "ipo_date": "2021-01-04",
+    "general_sector": "Consumer Non-Cyclicals",
+    "specific_sector": "Agricultural Products",
+    "shares_offered": 1001718,
+    "total_value": 3629411800,
+    "ipo_price": 1840,
+    "underwriters": "PT BCA Sekuritas",
+    "performance_metrics": [
+      { "metric_name": "return", "metric_value": 25, "period_days": 1 },
+      { "metric_name": "return", "metric_value": 42, "period_days": 7 }
+    ]
+  }
+]`;
+---
+
+<AdminLayout title="Import IPO Data" email={email}>
+	<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Header -->
+		<div class="mb-8">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-3xl font-bold text-gray-900">Import Data IPO</h1>
+					<p class="mt-2 text-sm text-gray-600">Import data IPO dari file Excel atau format JSON</p>
+				</div>
+				<a 
+					href="/dashboard/ipo-listings"
+					class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50"
+				>
+					Kembali
+				</a>
+			</div>
+		</div>
+
+		<!-- Import Form -->
+		<div class="bg-white shadow rounded-lg p-6">
+			<IPOImportForm client:load />
+		</div>
+
+		<!-- Instructions -->
+		<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+			<h2 class="text-lg font-semibold text-blue-900 mb-4">Format Data yang Didukung</h2>
+			<div class="space-y-3 text-sm text-blue-800">
+				<p><strong>Format JSON:</strong> Array of objects dengan struktur berikut:</p>
+				<pre class="bg-blue-100 p-4 rounded overflow-x-auto mt-2"><code>{exampleJson}</code></pre>
+				<p class="mt-4"><strong>Catatan:</strong></p>
+				<ul class="list-disc list-inside space-y-1 ml-4">
+					<li>Underwriters dapat berupa string (pisahkan dengan semicolon atau comma) atau array</li>
+					<li>Performance metrics adalah array dengan metric_name, metric_value (percentage), dan period_days</li>
+					<li>Data yang sudah ada akan diupdate berdasarkan ticker_symbol</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+</AdminLayout>
+

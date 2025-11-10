@@ -1,0 +1,94 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { supabase } from '../../db/supabase';
+import UnderwriterPerformance from '../../components/UnderwriterPerformance';
+
+// Fetch all underwriters with their performance stats
+const { data: underwriters, error } = await supabase
+  .from('underwriters')
+  .select(`
+    id,
+    name,
+    ipo_underwriters:ipo_underwriters (
+      ipo_listing:ipo_listings (
+        id,
+        ticker_symbol,
+        company_name,
+        ipo_date,
+        ipo_price,
+        ipo_performance_metrics:ipo_performance_metrics (
+          metric_name,
+          metric_value,
+          period_days
+        )
+      )
+    )
+  `)
+  .order('name', { ascending: true });
+
+// Calculate performance stats for each underwriter
+let underwritersWithStats = [];
+if (underwriters) {
+  underwritersWithStats = underwriters.map((underwriter: any) => {
+    const ipoListings = underwriter.ipo_underwriters || [];
+    const allMetrics: any[] = [];
+
+    ipoListings.forEach((item: any) => {
+      const metrics = item.ipo_listing?.ipo_performance_metrics || [];
+      allMetrics.push(...metrics);
+    });
+
+    // Group metrics by period_days
+    const metricsByPeriod: Record<number, number[]> = {};
+    allMetrics.forEach((metric: any) => {
+      if (metric.period_days && metric.metric_value !== null) {
+        if (!metricsByPeriod[metric.period_days]) {
+          metricsByPeriod[metric.period_days] = [];
+        }
+        metricsByPeriod[metric.period_days].push(metric.metric_value);
+      }
+    });
+
+    // Calculate averages, min, max for each period
+    const performanceByPeriod: Record<number, { avg: number; min: number; max: number; count: number }> = {};
+    Object.keys(metricsByPeriod).forEach((period) => {
+      const values = metricsByPeriod[parseInt(period)];
+      const avg = values.reduce((a, b) => a + b, 0) / values.length;
+      performanceByPeriod[parseInt(period)] = {
+        avg: parseFloat(avg.toFixed(2)),
+        min: Math.min(...values),
+        max: Math.max(...values),
+        count: values.length,
+      };
+    });
+
+    return {
+      ...underwriter,
+      total_ipos: ipoListings.length,
+      performance_by_period: performanceByPeriod,
+      ipo_listings: ipoListings.map((item: any) => item.ipo_listing).filter((item: any) => item !== null),
+    };
+  }).filter((u: any) => u.total_ipos > 0); // Only show underwriters with IPOs
+}
+---
+
+<Layout title="History Performa Underwriter IPO">
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Header -->
+		<div class="mb-8">
+			<h1 class="text-3xl font-bold text-gray-900">History Performa Underwriter IPO</h1>
+			<p class="mt-2 text-sm text-gray-600">
+				Analisis performa IPO yang ditangani oleh berbagai underwriter
+			</p>
+		</div>
+
+		<!-- Underwriter Performance -->
+		<UnderwriterPerformance 
+			client:load
+			underwriters={JSON.stringify(underwritersWithStats || [])}
+		/>
+	</div>
+</Layout>
+
