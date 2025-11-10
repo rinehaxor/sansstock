@@ -4,14 +4,6 @@ const supabaseUrl = import.meta.env.SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.SUPABASE_ANON_KEY;
 const supabaseServiceKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY; // Optional: untuk admin operations
 
-// Validate required environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-   throw new Error(
-      'Missing required environment variables: SUPABASE_URL and SUPABASE_ANON_KEY must be set. ' +
-      'Please configure them in your Vercel project settings under Environment Variables.'
-   );
-}
-
 // Public client (untuk GET requests yang tidak butuh auth)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
    auth: {
