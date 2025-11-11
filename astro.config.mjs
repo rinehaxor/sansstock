@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 import react from '@astrojs/react';
-import vercel from '@astrojs/vercel';
+import node from '@astrojs/node';
 
 // https://astro.build/config
 export default defineConfig({
@@ -9,7 +9,9 @@ export default defineConfig({
    // Jika tidak ada, akan menggunakan fallback atau detect otomatis saat runtime
    site: import.meta.env.SITE_URL || undefined, // undefined = Astro akan detect otomatis
    output: 'server',
-   adapter: vercel(),
+   adapter: node({
+      mode: 'standalone',
+   }),
    integrations: [tailwind(), react()],
    image: {
       domains: ['localhost', 'supabase.co', '*.supabase.co'],

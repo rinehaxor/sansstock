@@ -7,6 +7,10 @@ dist/
 # Vercel
 .vercel/
 
+# PM2 logs
+logs/
+*.log
+
 # dependencies
 node_modules/
 
