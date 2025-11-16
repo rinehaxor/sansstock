@@ -51,10 +51,22 @@ export async function getAuthenticatedUser(context: APIContext) {
 
 /**
  * Check if user is admin
+ *
+ * This is an admin-only system, so all authenticated users are admins.
+ * However, we verify that the user is authenticated and session is valid.
+ *
+ * To add additional security in the future, you can:
  * Option 1: Check user metadata role
- * Option 2: Check di database users table
- * For now, we check if user exists (authenticated = admin)
- * You can modify this to check actual role from database or user metadata
+ *    const role = user.user_metadata?.role;
+ *    return role === 'admin';
+ *
+ * Option 2: Check from database users table
+ *    const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
+ *    return data?.role === 'admin';
+ *
+ * Option 3: Whitelist admin emails (set ALLOWED_ADMIN_EMAILS in env)
+ *    const allowedEmails = (import.meta.env.ALLOWED_ADMIN_EMAILS || '').split(',').map(e => e.trim());
+ *    return allowedEmails.includes(user.email);
  */
 export async function isAdmin(context: APIContext): Promise<boolean> {
    const user = await getAuthenticatedUser(context);
@@ -62,16 +74,29 @@ export async function isAdmin(context: APIContext): Promise<boolean> {
       return false;
    }
 
-   // TODO: Add actual role check here
-   // Option 1: Check user metadata
+   // Verify user has valid email (basic validation)
+   if (!user.email || !user.email.includes('@')) {
+      return false;
+   }
+
+   // Optional: Check whitelist of admin emails from environment variable
+   // Uncomment if you want to restrict to specific emails
+   // const allowedAdminEmails = (import.meta.env.ALLOWED_ADMIN_EMAILS || '')
+   //    .split(',')
+   //    .map((email: string) => email.trim().toLowerCase())
+   //    .filter((email: string) => email.length > 0);
+   //
+   // if (allowedAdminEmails.length > 0 && !allowedAdminEmails.includes(user.email.toLowerCase())) {
+   //    return false;
+   // }
+
+   // Optional: Check user metadata for role
+   // Uncomment if you set role in Supabase user metadata
    // const role = user.user_metadata?.role;
-   // return role === 'admin';
+   // if (role && role !== 'admin') {
+   //    return false;
+   // }
 
-   // Option 2: Check from database
-   // const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
-   // return data?.role === 'admin';
-
-   // For now: all authenticated users are admins
+   // All authenticated users with valid email are admins (admin-only system)
    return true;
 }
-

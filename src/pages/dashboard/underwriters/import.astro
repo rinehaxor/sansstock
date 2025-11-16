@@ -1,0 +1,105 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../db/supabase';
+import UnderwriterImportForm from '../../../components/UnderwriterImportForm';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+const exampleJson1 = `["PT BCA Sekuritas", "PT Mandiri Sekuritas", "PT Danareksa Sekuritas", "PT Indo Premier Sekuritas"]`;
+const exampleJson2 = `[{"name": "PT BCA Sekuritas"}, {"name": "PT Mandiri Sekuritas"}, {"name": "PT Danareksa Sekuritas"}]`;
+---
+
+<AdminLayout title="Import Underwriter" email={email}>
+	<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Header -->
+		<div class="mb-8">
+			<div class="flex items-center justify-between">
+				<div>
+					<h1 class="text-3xl font-bold text-gray-900">Import Data Underwriter</h1>
+					<p class="mt-2 text-sm text-gray-600">Import banyak underwriter sekaligus dari file Excel atau format JSON</p>
+				</div>
+				<a 
+					href="/dashboard/underwriters"
+					class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50"
+				>
+					Kembali
+				</a>
+			</div>
+		</div>
+
+		<!-- Import Form -->
+		<div class="bg-white shadow rounded-lg p-6">
+			<UnderwriterImportForm client:load />
+		</div>
+
+		<!-- Instructions -->
+		<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+			<h2 class="text-lg font-semibold text-blue-900 mb-4">Format Data yang Didukung</h2>
+			<div class="space-y-3 text-sm text-blue-800">
+				<p><strong>Format JSON:</strong> Array of strings atau array of objects:</p>
+				
+				<div class="space-y-2 mt-3">
+					<div>
+						<p class="font-medium mb-1">Format 1: Array of Strings</p>
+						<pre class="bg-blue-100 p-4 rounded overflow-x-auto text-xs"><code>{exampleJson1}</code></pre>
+					</div>
+					
+					<div>
+						<p class="font-medium mb-1">Format 2: Array of Objects</p>
+						<pre class="bg-blue-100 p-4 rounded overflow-x-auto text-xs"><code>{exampleJson2}</code></pre>
+					</div>
+				</div>
+
+				<p class="mt-4"><strong>Catatan:</strong></p>
+				<ul class="list-disc list-inside space-y-1 ml-4">
+					<li>Underwriter yang sudah ada akan dilewati (tidak akan duplikat)</li>
+					<li>Nama underwriter akan di-trim otomatis (spasi di awal/akhir dihapus)</li>
+					<li>Duplikat dalam data akan dihapus otomatis</li>
+					<li>Bisa upload file JSON atau paste langsung di textarea</li>
+					<li>Mendukung import ratusan atau ribuan underwriter sekaligus</li>
+				</ul>
+
+				<div class="mt-4 p-3 bg-blue-100 rounded">
+					<p class="font-medium mb-1">💡 Tips dari Excel ke JSON:</p>
+					<ol class="list-decimal list-inside space-y-1 text-xs ml-2">
+						<li>Copy kolom nama underwriter dari Excel</li>
+						<li>Paste ke text editor (Notepad/VS Code)</li>
+						<li>Replace newline dengan <code class="bg-blue-200 px-1 rounded">,</code></li>
+						<li>Tambahkan <code class="bg-blue-200 px-1 rounded">[</code> di awal dan <code class="bg-blue-200 px-1 rounded">]</code> di akhir</li>
+						<li>Bungkus setiap nama dengan <code class="bg-blue-200 px-1 rounded">"</code> (double quote)</li>
+						<li>Atau gunakan Excel formula: <code class="bg-blue-200 px-1 rounded">="["&CHAR(34)&A1&CHAR(34)&","&CHAR(34)&A2&CHAR(34)&"]"</code></li>
+					</ol>
+				</div>
+			</div>
+		</div>
+	</div>
+</AdminLayout>
+

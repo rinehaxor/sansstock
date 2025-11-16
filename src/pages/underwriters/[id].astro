@@ -1,0 +1,358 @@
+---
+export const prerender = false;
+
+import Layout from '../../layouts/Layout.astro';
+import { supabase } from '../../db/supabase';
+
+const underwriterId = Astro.params.id ? parseInt(Astro.params.id, 10) : null;
+if (!underwriterId || Number.isNaN(underwriterId)) {
+  return Astro.redirect('/underwriters');
+}
+
+// Fetch underwriter with detailed IPO listings
+const { data: underwriter, error } = await supabase
+  .from('underwriters')
+  .select(`
+    id,
+    name,
+    created_at,
+    ipo_underwriters:ipo_underwriters (
+      ipo_listing:ipo_listings (
+        id,
+        ticker_symbol,
+        company_name,
+        ipo_date,
+        ipo_price,
+        general_sector,
+        specific_sector,
+        shares_offered,
+        total_value,
+        assets_growth_1y,
+        liabilities_growth_1y,
+        revenue_growth_1y,
+        net_income_growth_1y,
+        lead_underwriter,
+        accounting_firm,
+        ipo_performance_metrics:ipo_performance_metrics (
+          metric_name,
+          metric_value,
+          period_days
+        )
+      )
+    )
+  `)
+  .eq('id', underwriterId)
+  .maybeSingle();
+
+if (error || !underwriter) {
+  return Astro.redirect('/underwriters');
+}
+
+const ipoUnderwriters = underwriter.ipo_underwriters || [];
+const ipoListings = ipoUnderwriters.map((item: any) => item.ipo_listing).filter((item: any) => item !== null);
+const allMetrics: any[] = [];
+
+ipoUnderwriters.forEach((item: any) => {
+  const metrics = item.ipo_listing?.ipo_performance_metrics || [];
+  allMetrics.push(...metrics);
+});
+
+// Group metrics by period_days
+const metricsByPeriod: Record<number, number[]> = {};
+allMetrics.forEach((metric: any) => {
+  if (metric.period_days && metric.metric_value !== null) {
+    if (!metricsByPeriod[metric.period_days]) {
+      metricsByPeriod[metric.period_days] = [];
+    }
+    metricsByPeriod[metric.period_days].push(metric.metric_value);
+  }
+});
+
+// Calculate averages, min, max for each period
+const performanceByPeriod: Record<number, { avg: number; min: number; max: number; count: number }> = {};
+Object.keys(metricsByPeriod).forEach((period) => {
+  const values = metricsByPeriod[parseInt(period)];
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  performanceByPeriod[parseInt(period)] = {
+    avg: parseFloat(avg.toFixed(2)),
+    min: Math.min(...values),
+    max: Math.max(...values),
+    count: values.length,
+  };
+});
+
+// Calculate global best performance (maximum value across ALL periods and ALL IPOs)
+const allPerformanceValues = allMetrics
+  .filter((m: any) => m.metric_value !== null && m.metric_value !== undefined)
+  .map((m: any) => m.metric_value);
+const globalBestPerformance = allPerformanceValues.length > 0 ? Math.max(...allPerformanceValues) : null;
+const globalBestPeriod = globalBestPerformance !== null
+  ? allMetrics.find((m: any) => m.metric_value === globalBestPerformance)?.period_days || null
+  : null;
+
+// Calculate global average performance (average across all periods)
+const globalAvgPerformance = allPerformanceValues.length > 0
+  ? allPerformanceValues.reduce((a, b) => a + b, 0) / allPerformanceValues.length
+  : null;
+
+// Sort IPO listings by date (newest first)
+const sortedIpoListings = [...ipoListings].sort((a: any, b: any) => {
+  return new Date(b.ipo_date).getTime() - new Date(a.ipo_date).getTime();
+});
+
+const availablePeriods = Object.keys(performanceByPeriod).map(p => parseInt(p)).sort((a, b) => a - b);
+---
+
+<Layout 
+	title={`${underwriter.name} - History IPO Underwriter`}
+	description={`History lengkap IPO yang ditangani oleh ${underwriter.name}. Lihat daftar IPO, performa, dan statistik lengkap.`}
+	keywords={`${underwriter.name}, underwriter IPO, history IPO, performa IPO, BEI, IHSG`}
+>
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<!-- Breadcrumb -->
+		<div class="mb-6">
+			<div class="flex items-center gap-2 text-sm text-gray-500">
+				<a href="/" class="hover:text-gray-700">Beranda</a>
+				<span>/</span>
+				<a href="/underwriters" class="hover:text-gray-700">Underwriter IPO</a>
+				<span>/</span>
+				<span>{underwriter.name}</span>
+			</div>
+		</div>
+
+		<!-- Header -->
+		<div class="mb-8">
+			<div class="flex items-start justify-between">
+				<div>
+					<h1 class="text-4xl font-bold text-gray-900 mb-2">{underwriter.name}</h1>
+					<p class="text-lg text-gray-600">
+						History IPO yang ditangani di Bursa Efek Indonesia (BEI/IHSG)
+					</p>
+				</div>
+				<a 
+					href="/underwriters" 
+					class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+				>
+					← Kembali
+				</a>
+			</div>
+		</div>
+
+		<!-- Stats Cards -->
+		<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+			<div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+				<div class="text-sm font-medium text-gray-500 mb-1">Total IPO</div>
+				<div class="text-3xl font-bold text-gray-900">{ipoListings.length}</div>
+				<div class="text-xs text-gray-500 mt-1">IPO yang ditangani</div>
+			</div>
+			{availablePeriods.length > 0 && (() => {
+				const firstPeriod = availablePeriods[0];
+				const firstPerf = performanceByPeriod[firstPeriod];
+				return firstPerf ? (
+					<div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+						<div class="text-sm font-medium text-gray-500 mb-1">Rata-rata Performa</div>
+						<div class={`text-3xl font-bold ${firstPerf.avg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+							{firstPerf.avg >= 0 ? '+' : ''}{firstPerf.avg.toFixed(2)}%
+						</div>
+						<div class="text-xs text-gray-500 mt-1">
+							{firstPeriod === 1 ? 'Periode Hari 1' :
+							 firstPeriod === 7 ? 'Periode Minggu 1' :
+							 firstPeriod === 30 ? 'Periode Bulan 1' :
+							 firstPeriod === 90 ? 'Periode Bulan 3' :
+							 firstPeriod === 180 ? 'Periode Bulan 6' :
+							 firstPeriod === 365 ? 'Periode Tahun 1' :
+							 `Periode ${firstPeriod} hari`}
+						</div>
+					</div>
+				) : null;
+			})()}
+			{globalBestPerformance !== null && globalBestPeriod !== null && (() => {
+				function getPeriodLabel(days: number): string {
+					if (days === 1) return 'Hari 1';
+					if (days === 7) return 'Minggu 1';
+					if (days === 30) return 'Bulan 1';
+					if (days === 90) return 'Bulan 3';
+					if (days === 180) return 'Bulan 6';
+					if (days === 365) return 'Tahun 1';
+					return `${days} hari`;
+				}
+
+				const bestPeriodLabel = getPeriodLabel(globalBestPeriod);
+				
+				return (
+					<div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+						<div class="text-sm font-medium text-gray-500 mb-1">Performa Terbaik</div>
+						<div class={`text-3xl font-bold ${globalBestPerformance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+							{globalBestPerformance >= 0 ? '+' : ''}{globalBestPerformance.toFixed(2)}%
+						</div>
+						<div class="text-xs text-gray-500 mt-1">Maksimal dalam {bestPeriodLabel}</div>
+					</div>
+				);
+			})()}
+			<div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+				<div class="text-sm font-medium text-gray-500 mb-1">Periode Tersedia</div>
+				<div class="text-3xl font-bold text-gray-900">{availablePeriods.length}</div>
+				<div class="text-xs text-gray-500 mt-1">Periode analisis</div>
+			</div>
+		</div>
+
+		<!-- Performance Table -->
+		{availablePeriods.length > 0 && (
+			<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-8">
+				<h2 class="text-xl font-bold text-gray-900 mb-4">Rata-rata Performa IPO per Periode</h2>
+				<div class="overflow-x-auto">
+					<table class="min-w-full divide-y divide-gray-200">
+						<thead class="bg-gray-50">
+							<tr>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Periode</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rata-rata</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minimum</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Maksimum</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah Data</th>
+							</tr>
+						</thead>
+						<tbody class="bg-white divide-y divide-gray-200">
+							{availablePeriods.map((period) => {
+								const perf = performanceByPeriod[period];
+								if (!perf) return null;
+
+								function getPeriodLabel(days: number): string {
+									if (days === 1) return 'Hari 1';
+									if (days === 7) return 'Minggu 1';
+									if (days === 30) return 'Bulan 1';
+									if (days === 90) return 'Bulan 3';
+									if (days === 180) return 'Bulan 6';
+									if (days === 365) return 'Tahun 1';
+									return `${days} hari`;
+								}
+
+								return (
+									<tr class="hover:bg-gray-50">
+										<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+											{getPeriodLabel(period)}
+										</td>
+										<td class={`px-4 py-3 whitespace-nowrap text-sm font-semibold ${perf.avg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+											{perf.avg >= 0 ? '+' : ''}{perf.avg.toFixed(2)}%
+										</td>
+										<td class={`px-4 py-3 whitespace-nowrap text-sm ${perf.min >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+											{perf.min >= 0 ? '+' : ''}{perf.min.toFixed(2)}%
+										</td>
+										<td class={`px-4 py-3 whitespace-nowrap text-sm ${perf.max >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+											{perf.max >= 0 ? '+' : ''}{perf.max.toFixed(2)}%
+										</td>
+										<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+											{perf.count} IPO
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		)}
+
+		<!-- IPO Listings -->
+		<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+			<h2 class="text-xl font-bold text-gray-900 mb-4">Daftar IPO yang Ditangani</h2>
+			<p class="text-sm text-gray-600 mb-6">
+				Berikut adalah daftar lengkap IPO yang pernah ditangani oleh {underwriter.name} di Bursa Efek Indonesia.
+			</p>
+			
+			{ipoListings.length === 0 ? (
+				<div class="text-center py-12">
+					<p class="text-gray-500">Belum ada data IPO untuk underwriter ini.</p>
+				</div>
+			) : (
+				<div class="overflow-x-auto">
+					<table class="min-w-full divide-y divide-gray-200">
+						<thead class="bg-gray-50">
+							<tr>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Perusahaan</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal IPO</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sektor</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga IPO</th>
+								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performa</th>
+							</tr>
+						</thead>
+						<tbody class="bg-white divide-y divide-gray-200">
+							{sortedIpoListings.map((ipo: any) => {
+								const formatCurrency = (num: number | null | undefined): string => {
+									if (num === null || num === undefined) return '-';
+									return new Intl.NumberFormat('id-ID', {
+										style: 'currency',
+										currency: 'IDR',
+										minimumFractionDigits: 0,
+										maximumFractionDigits: 0,
+									}).format(num);
+								};
+
+								const formatPercent = (value: number | null | undefined): string => {
+									if (value === null || value === undefined || Number.isNaN(value)) {
+										return '-';
+									}
+									return `${Number(value).toFixed(2)}%`;
+								};
+
+								const formatDate = (dateString: string): string => {
+									const date = new Date(dateString);
+									return date.toLocaleDateString('id-ID', {
+										year: 'numeric',
+										month: 'long',
+										day: 'numeric',
+									});
+								};
+
+								const metrics = ipo.ipo_performance_metrics || [];
+								const latestMetric = metrics.length > 0 ? metrics[metrics.length - 1] : null;
+
+								return (
+									<tr class="hover:bg-gray-50">
+										<td class="px-4 py-3 whitespace-nowrap">
+											<div class="font-medium text-blue-600">{ipo.ticker_symbol}</div>
+										</td>
+										<td class="px-4 py-3">
+											<div class="text-sm font-medium text-gray-900 max-w-xs">{ipo.company_name}</div>
+										</td>
+										<td class="px-4 py-3 whitespace-nowrap">
+											<div class="text-sm text-gray-900">{formatDate(ipo.ipo_date)}</div>
+										</td>
+										<td class="px-4 py-3">
+											<div class="text-sm text-gray-900">{ipo.general_sector || '-'}</div>
+											{ipo.specific_sector && (
+												<div class="text-xs text-gray-500">{ipo.specific_sector}</div>
+											)}
+										</td>
+										<td class="px-4 py-3 whitespace-nowrap">
+											<div class="text-sm text-gray-900">{formatCurrency(ipo.ipo_price)}</div>
+										</td>
+										<td class="px-4 py-3">
+											{latestMetric ? (
+												<div class="text-sm">
+													<div class={`font-semibold ${latestMetric.metric_value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+														{latestMetric.metric_value >= 0 ? '+' : ''}{latestMetric.metric_value.toFixed(2)}%
+													</div>
+													<div class="text-xs text-gray-500">
+														{latestMetric.period_days === 1 ? 'Hari 1' : 
+														 latestMetric.period_days === 7 ? 'Minggu 1' :
+														 latestMetric.period_days === 30 ? 'Bulan 1' :
+														 latestMetric.period_days === 365 ? 'Tahun 1' :
+														 `${latestMetric.period_days} hari`}
+													</div>
+												</div>
+											) : (
+												<span class="text-sm text-gray-400">-</span>
+											)}
+										</td>
+									</tr>
+								);
+							})}
+						</tbody>
+					</table>
+				</div>
+			)}
+		</div>
+	</div>
+</Layout>
+

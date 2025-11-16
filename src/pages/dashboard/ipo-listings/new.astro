@@ -1,0 +1,60 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../db/supabase';
+import IPOListingForm from '../../../components/IPOListingForm';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+const { data: underwriters } = await supabase
+  .from('underwriters')
+  .select('id, name')
+  .order('name', { ascending: true });
+---
+
+<AdminLayout title="IPO Listing Baru" email={email}>
+	<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<div class="flex items-center justify-between mb-8">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Tambah IPO Listing</h1>
+				<p class="mt-2 text-sm text-gray-600">Lengkapi detail IPO, pilih underwriter, dan tambahkan metrik performa.</p>
+			</div>
+			<a href="/dashboard/ipo-listings" class="text-sm text-gray-600 hover:text-gray-900">
+				&larr; Kembali ke daftar
+			</a>
+		</div>
+
+		<IPOListingForm 
+			client:load
+			mode="create"
+			underwriters={JSON.stringify(underwriters || [])}
+		/>
+	</div>
+</AdminLayout>

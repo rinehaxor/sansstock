@@ -1,0 +1,13 @@
+{
+  "name": "sansstocks-bulk-import",
+  "version": "1.0.0",
+  "description": "Scripts untuk bulk import IPO listings ke Supabase",
+  "scripts": {
+    "convert": "node convert-excel-to-json.js",
+    "generate-sql": "node bulk-insert-ipo.js"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
+

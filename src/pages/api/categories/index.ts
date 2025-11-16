@@ -4,6 +4,9 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../db/supabase';
 import { getAuthenticatedSupabase, isAdmin, getAuthenticatedUser } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
+import { categorySchema, safeValidateAndSanitize } from '../../../lib/validation';
+import { apiRateLimit } from '../../../lib/ratelimit';
 
 // GET /api/categories - Public read (untuk dropdown, dll)
 export const GET: APIRoute = async () => {
@@ -34,6 +37,18 @@ export const GET: APIRoute = async () => {
 
 // POST /api/categories - Admin only (RLS enforced)
 export const POST: APIRoute = async (context) => {
+   // Rate limiting - prevent DDoS
+   const rateLimitError = apiRateLimit(context);
+   if (rateLimitError) {
+      return rateLimitError;
+   }
+
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    // Get authenticated Supabase client (will enforce RLS)
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
@@ -54,15 +69,19 @@ export const POST: APIRoute = async (context) => {
 
    try {
       const body = await context.request.json();
-      const { name, slug, description } = body;
 
-      // Validation
-      if (!name || !slug) {
-         return new Response(JSON.stringify({ error: 'Name and slug are required' }), {
+      // Validate and sanitize input using Zod schema
+      const validationResult = safeValidateAndSanitize(categorySchema, body);
+
+      if (!validationResult.success) {
+         const errors = validationResult.error.errors.map((err) => `${err.path.join('.')}: ${err.message}`).join(', ');
+         return new Response(JSON.stringify({ error: 'Validation failed', details: errors }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' },
          });
       }
+
+      const { name, slug, description } = validationResult.data;
 
       // Check if slug already exists using authenticated client
       const { data: existingCategory } = await authenticatedClient

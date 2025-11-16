@@ -3,6 +3,62 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../db/supabase';
 import { getAuthenticatedSupabase, getAuthenticatedUser, isAdmin } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
+import { apiRateLimit } from '../../../lib/ratelimit';
+
+const normalizeIpoListing = (record: any) => {
+   if (!record) {
+      return record;
+   }
+
+   const toNumber = (value: unknown) => (value === null || value === undefined ? null : Number(value));
+
+   const normalizeUnderwriterLink = (entry: any) => {
+      if (!entry) {
+         return entry;
+      }
+
+      return {
+         ...entry,
+         id: toNumber(entry.id),
+         ipo_listing_id: toNumber(entry.ipo_listing_id),
+         underwriter_id: toNumber(entry.underwriter_id),
+         underwriter: entry.underwriter
+            ? {
+                 ...entry.underwriter,
+                 id: toNumber(entry.underwriter.id),
+              }
+            : null,
+      };
+   };
+
+   const normalizePerformanceMetric = (entry: any) => {
+      if (!entry) {
+         return entry;
+      }
+
+      return {
+         ...entry,
+         id: toNumber(entry.id),
+         ipo_listing_id: toNumber(entry.ipo_listing_id),
+         metric_value: toNumber(entry.metric_value),
+         period_days: toNumber(entry.period_days),
+      };
+   };
+
+   return {
+      ...record,
+      shares_offered: toNumber(record.shares_offered),
+      total_value: toNumber(record.total_value),
+      ipo_price: toNumber(record.ipo_price),
+      assets_growth_1y: toNumber(record.assets_growth_1y),
+      liabilities_growth_1y: toNumber(record.liabilities_growth_1y),
+      revenue_growth_1y: toNumber(record.revenue_growth_1y),
+      net_income_growth_1y: toNumber(record.net_income_growth_1y),
+      ipo_underwriters: (record.ipo_underwriters || []).map(normalizeUnderwriterLink),
+      ipo_performance_metrics: (record.ipo_performance_metrics || []).map(normalizePerformanceMetric),
+   };
+};
 
 // GET /api/ipo-listings - Public (semua bisa akses)
 export const GET: APIRoute = async ({ request, url }) => {
@@ -27,6 +83,13 @@ export const GET: APIRoute = async ({ request, url }) => {
             shares_offered,
             total_value,
             ipo_price,
+            assets_growth_1y,
+            liabilities_growth_1y,
+            revenue_growth_1y,
+            net_income_growth_1y,
+            lead_underwriter,
+            accounting_firm,
+            legal_consultant,
             created_at,
             updated_at,
             ipo_underwriters:ipo_underwriters (
@@ -51,9 +114,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
       // Search
       if (search) {
-         query = query.or(
-            `ticker_symbol.ilike.%${search}%,company_name.ilike.%${search}%,general_sector.ilike.%${search}%,specific_sector.ilike.%${search}%`
-         );
+         query = query.or(`ticker_symbol.ilike.%${search}%,company_name.ilike.%${search}%,general_sector.ilike.%${search}%,specific_sector.ilike.%${search}%`);
       }
 
       const { data, error, count } = await query;
@@ -67,7 +128,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
       return new Response(
          JSON.stringify({
-            data: data || [],
+            data: (data || []).map(normalizeIpoListing),
             total: count || 0,
             page,
             limit,
@@ -88,6 +149,18 @@ export const GET: APIRoute = async ({ request, url }) => {
 
 // POST /api/ipo-listings - Admin only
 export const POST: APIRoute = async (context) => {
+   // Rate limiting - prevent DDoS
+   const rateLimitError = apiRateLimit(context);
+   if (rateLimitError) {
+      return rateLimitError;
+   }
+
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
       return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
@@ -125,6 +198,13 @@ export const POST: APIRoute = async (context) => {
          ipo_price,
          underwriter_ids = [],
          performance_metrics = [],
+         assets_growth_1y,
+         liabilities_growth_1y,
+         revenue_growth_1y,
+         net_income_growth_1y,
+         lead_underwriter,
+         accounting_firm,
+            legal_consultant,
       } = body;
 
       // Validation
@@ -144,9 +224,16 @@ export const POST: APIRoute = async (context) => {
             ipo_date,
             general_sector: general_sector || null,
             specific_sector: specific_sector || null,
-            shares_offered: shares_offered ? BigInt(shares_offered) : null,
-            total_value: total_value || null,
-            ipo_price: ipo_price || null,
+            shares_offered: shares_offered != null ? Number(shares_offered) : null,
+            total_value: total_value != null ? Number(total_value) : null,
+            ipo_price: ipo_price != null ? Number(ipo_price) : null,
+            assets_growth_1y: assets_growth_1y ?? null,
+            liabilities_growth_1y: liabilities_growth_1y ?? null,
+            revenue_growth_1y: revenue_growth_1y ?? null,
+            net_income_growth_1y: net_income_growth_1y ?? null,
+            lead_underwriter: lead_underwriter || null,
+            accounting_firm: accounting_firm || null,
+            legal_consultant: legal_consultant || null,
          })
          .select()
          .single();
@@ -165,9 +252,7 @@ export const POST: APIRoute = async (context) => {
             underwriter_id: underwriterId,
          }));
 
-         const { error: underwriterError } = await authenticatedClient
-            .from('ipo_underwriters')
-            .insert(ipoUnderwriters);
+         const { error: underwriterError } = await authenticatedClient.from('ipo_underwriters').insert(ipoUnderwriters);
 
          if (underwriterError) {
             console.error('Error adding underwriters:', underwriterError);
@@ -183,9 +268,7 @@ export const POST: APIRoute = async (context) => {
             period_days: metric.period_days || null,
          }));
 
-         const { error: metricsError } = await authenticatedClient
-            .from('ipo_performance_metrics')
-            .insert(metrics);
+         const { error: metricsError } = await authenticatedClient.from('ipo_performance_metrics').insert(metrics);
 
          if (metricsError) {
             console.error('Error adding performance metrics:', metricsError);
@@ -215,7 +298,7 @@ export const POST: APIRoute = async (context) => {
          .eq('id', ipoListing.id)
          .single();
 
-      return new Response(JSON.stringify({ data: completeListing }), {
+      return new Response(JSON.stringify({ data: normalizeIpoListing(completeListing) }), {
          status: 201,
          headers: { 'Content-Type': 'application/json' },
       });
@@ -226,4 +309,3 @@ export const POST: APIRoute = async (context) => {
       });
    }
 };
-

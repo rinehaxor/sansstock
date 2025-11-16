@@ -1,0 +1,407 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../../db/supabase';
+import UnderwriterSelectWrapper from '../../../../components/UnderwriterSelectWrapper';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+const listingId = Astro.params.id ? parseInt(Astro.params.id, 10) : null;
+if (!listingId || Number.isNaN(listingId)) {
+  return Astro.redirect('/dashboard/ipo-listings');
+}
+
+const { data: ipoListing, error } = await supabase
+  .from('ipo_listings')
+  .select(`
+    id,
+    ticker_symbol,
+    company_name,
+    ipo_date,
+    general_sector,
+    specific_sector,
+    shares_offered,
+    total_value,
+    ipo_price,
+    ipo_underwriters:ipo_underwriters (
+      underwriter_id,
+      underwriter:underwriters (
+        id,
+        name
+      )
+    ),
+    ipo_performance_metrics:ipo_performance_metrics (
+      id,
+      metric_name,
+      metric_value,
+      period_days
+    )
+  `)
+  .eq('id', listingId)
+  .maybeSingle();
+
+if (error || !ipoListing) {
+  return Astro.redirect('/dashboard/ipo-listings');
+}
+
+const { data: underwriters } = await supabase
+  .from('underwriters')
+  .select('id, name')
+  .order('name', { ascending: true });
+
+const selectedUnderwriterIds = new Set(
+  (ipoListing.ipo_underwriters || []).map((item: any) => item.underwriter_id || item.underwriter?.id)
+);
+---
+
+<AdminLayout title="Edit IPO Listing" email={email}>
+	<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<div class="flex items-center justify-between mb-8">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Edit IPO Listing</h1>
+				<p class="mt-2 text-sm text-gray-600">Perbarui detail IPO {ipoListing.ticker_symbol}.</p>
+			</div>
+			<a href="/dashboard/ipo-listings" class="text-sm text-gray-600 hover:text-gray-900">
+				&larr; Kembali ke daftar
+			</a>
+		</div>
+
+		<form id="ipoEditForm" data-listing-id={ipoListing.id} class="bg-white shadow-sm rounded-xl border border-gray-200 p-6 space-y-8">
+			<section class="space-y-4">
+				<h2 class="text-lg font-semibold text-gray-900">Informasi Dasar</h2>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label for="ticker_symbol" class="block text-sm font-medium text-gray-700 mb-1">
+							Ticker Symbol <span class="text-red-500">*</span>
+						</label>
+						<input id="ticker_symbol" name="ticker_symbol" type="text" required value={ipoListing.ticker_symbol}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 uppercase" />
+					</div>
+					<div>
+						<label for="ipo_date" class="block text-sm font-medium text-gray-700 mb-1">
+							Tanggal IPO <span class="text-red-500">*</span>
+						</label>
+						<input id="ipo_date" name="ipo_date" type="date" required value={ipoListing.ipo_date?.slice(0, 10)}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+				</div>
+
+				<div>
+					<label for="company_name" class="block text-sm font-medium text-gray-700 mb-1">
+						Nama Perusahaan <span class="text-red-500">*</span>
+					</label>
+					<input id="company_name" name="company_name" type="text" required value={ipoListing.company_name}
+						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label for="general_sector" class="block text-sm font-medium text-gray-700 mb-1">
+							Sektor Umum
+						</label>
+						<input id="general_sector" name="general_sector" type="text" value={ipoListing.general_sector || ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+					<div>
+						<label for="specific_sector" class="block text-sm font-medium text-gray-700 mb-1">
+							Sektor Spesifik
+						</label>
+						<input id="specific_sector" name="specific_sector" type="text" value={ipoListing.specific_sector || ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+				</div>
+			</section>
+
+			<section class="space-y-4">
+				<h2 class="text-lg font-semibold text-gray-900">Pertumbuhan Kinerja Keuangan (1 Tahun)</h2>
+				<p class="text-sm text-gray-500">Nilai persen, contoh 25 untuk 25%.</p>
+				<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+					<div>
+						<label for="assets_growth_1y" class="block text-sm font-medium text-gray-700 mb-1">Aset (1Y)</label>
+						<input id="assets_growth_1y" name="assets_growth_1y" type="number" step="0.01" value={ipoListing.assets_growth_1y ?? ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+					<div>
+						<label for="liabilities_growth_1y" class="block text-sm font-medium text-gray-700 mb-1">Liabilitas (1Y)</label>
+						<input id="liabilities_growth_1y" name="liabilities_growth_1y" type="number" step="0.01" value={ipoListing.liabilities_growth_1y ?? ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+					<div>
+						<label for="revenue_growth_1y" class="block text-sm font-medium text-gray-700 mb-1">Pendapatan (1Y)</label>
+						<input id="revenue_growth_1y" name="revenue_growth_1y" type="number" step="0.01" value={ipoListing.revenue_growth_1y ?? ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+					<div>
+						<label for="net_income_growth_1y" class="block text-sm font-medium text-gray-700 mb-1">Laba Bersih (1Y)</label>
+						<input id="net_income_growth_1y" name="net_income_growth_1y" type="number" step="0.01" value={ipoListing.net_income_growth_1y ?? ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+				</div>
+			</section>
+
+			<section class="space-y-4">
+				<h2 class="text-lg font-semibold text-gray-900">Profesi Penunjang</h2>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label for="lead_underwriter" class="block text-sm font-medium text-gray-700 mb-1">Penjamin Pelaksana Emisi</label>
+						<input id="lead_underwriter" name="lead_underwriter" type="text" value={ipoListing.lead_underwriter || ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+					<div>
+						<label for="accounting_firm" class="block text-sm font-medium text-gray-700 mb-1">Kantor Akuntan Publik</label>
+						<input id="accounting_firm" name="accounting_firm" type="text" value={ipoListing.accounting_firm || ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+				</div>
+			</section>
+
+			<section class="space-y-4">
+				<h2 class="text-lg font-semibold text-gray-900">Detail Penawaran</h2>
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div>
+						<label for="shares_offered" class="block text-sm font-medium text-gray-700 mb-1">
+							Jumlah Saham Ditawarkan
+						</label>
+						<input id="shares_offered" name="shares_offered" type="number" min="0" step="1" value={ipoListing.shares_offered ?? ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+					<div>
+						<label for="total_value" class="block text-sm font-medium text-gray-700 mb-1">
+							Total Nilai IPO
+						</label>
+						<input id="total_value" name="total_value" type="number" min="0" step="1000" value={ipoListing.total_value ?? ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+					<div>
+						<label for="ipo_price" class="block text-sm font-medium text-gray-700 mb-1">
+							Harga IPO per Saham
+						</label>
+						<input id="ipo_price" name="ipo_price" type="number" min="0" step="1" value={ipoListing.ipo_price ?? ''}
+							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+					</div>
+				</div>
+			</section>
+
+			<section class="space-y-4">
+				<h2 class="text-lg font-semibold text-gray-900">Underwriter</h2>
+				<div>
+					<label for="underwriterIds" class="block text-sm font-medium text-gray-700 mb-1">
+						Pilih Underwriter (boleh lebih dari satu)
+					</label>
+					<UnderwriterSelectWrapper 
+						client:load
+						underwriters={JSON.stringify(underwriters || [])}
+						selectedIds={Array.from(selectedUnderwriterIds)}
+					/>
+					<p class="mt-1 text-xs text-gray-500">Klik dropdown untuk memilih underwriter. Pilih beberapa dengan klik checkbox.</p>
+				</div>
+			</section>
+
+			<section class="space-y-4">
+				<div class="flex items-center justify-between">
+					<h2 class="text-lg font-semibold text-gray-900">Metrik Performa IPO</h2>
+					<button type="button" id="addMetricRow"
+						class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800">
+						<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+						</svg>
+						Tambah Metric
+					</button>
+				</div>
+
+				<div id="metricsContainer" class="space-y-3"></div>
+			</section>
+
+			<div class="flex items-center justify-end gap-4 pt-6 border-t border-gray-200">
+				<a href="/dashboard/ipo-listings"
+					class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+					Batal
+				</a>
+				<button type="submit"
+					class="px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+					Simpan Perubahan
+				</button>
+			</div>
+		</form>
+	</div>
+
+	<script type="application/json" id="existingMetrics">
+		{JSON.stringify(ipoListing.ipo_performance_metrics || [])}
+	</script>
+
+	<script type="module">
+		// Wait for DOM to be ready
+		document.addEventListener('DOMContentLoaded', () => {
+		const form = document.getElementById('ipoEditForm');
+		const listingId = form?.dataset.listingId;
+		const metricsContainer = document.getElementById('metricsContainer');
+		const addMetricRowBtn = document.getElementById('addMetricRow');
+		const existingMetricsData = document.getElementById('existingMetrics')?.textContent || '[]';
+
+			if (!form || !metricsContainer || !addMetricRowBtn) {
+				console.error('Required elements not found');
+				return;
+			}
+
+		const parseNumber = (value) => {
+			if (value === null || value === undefined) return null;
+			const str = value.toString().trim();
+			if (!str) return null;
+			const parsed = Number(str);
+			return Number.isNaN(parsed) ? null : parsed;
+		};
+
+		const addMetricRow = (metric = { metric_name: 'return', period_days: '', metric_value: '' }) => {
+			const row = document.createElement('div');
+			row.className = 'metric-row grid grid-cols-1 md:grid-cols-3 gap-3 items-end bg-gray-50 rounded-lg p-3';
+			row.innerHTML = `
+				<div>
+					<label class="block text-xs font-medium text-gray-600 mb-1">Nama Metric</label>
+						<input type="text" class="metric-name w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${(metric.metric_name || 'return').replace(/"/g, '&quot;')}" />
+				</div>
+				<div>
+					<label class="block text-xs font-medium text-gray-600 mb-1">Periode (hari)</label>
+					<input type="number" min="1" class="metric-period w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${metric.period_days ?? ''}" />
+				</div>
+				<div>
+					<label class="block text-xs font-medium text-gray-600 mb-1">Nilai (%)</label>
+					<div class="flex gap-2">
+						<input type="number" step="0.01" class="metric-value flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" value="${metric.metric_value ?? ''}" />
+						<button type="button" class="remove-metric px-3 py-2 text-red-600 hover:text-red-800 text-sm font-medium">Hapus</button>
+					</div>
+				</div>
+			`;
+				
+				const removeBtn = row.querySelector('.remove-metric');
+				if (removeBtn) {
+					removeBtn.addEventListener('click', (e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						row.remove();
+						if (!metricsContainer?.children.length || metricsContainer?.children.length === 0) {
+							metricsContainer.innerHTML = '<p class="text-sm text-gray-500">Belum ada metrik. Klik "Tambah Metric" untuk menambahkan periode performa.</p>';
+						}
+					});
+				}
+
+				if (metricsContainer?.querySelector('p')) {
+					metricsContainer.innerHTML = '';
+				}
+				metricsContainer.appendChild(row);
+		};
+
+			// Load existing metrics
+		try {
+			const parsedMetrics = JSON.parse(existingMetricsData);
+			if (Array.isArray(parsedMetrics) && parsedMetrics.length) {
+				parsedMetrics.forEach((metric) => addMetricRow(metric));
+			} else {
+					// Don't auto-add if no existing metrics
+					if (metricsContainer.querySelector('p')) {
+						// Keep the placeholder message
+					}
+			}
+		} catch {
+				// Keep placeholder if parsing fails
+		}
+
+			addMetricRowBtn.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				addMetricRow();
+			});
+
+			form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			if (!listingId) {
+				alert('Data listing tidak valid.');
+				return;
+			}
+
+			const formData = new FormData(form);
+
+				// Get underwriter IDs from hidden input (JSON string)
+				const underwriterInput = document.getElementById('underwriterIds') as HTMLInputElement;
+				let underwriterIds: number[] = [];
+				if (underwriterInput && underwriterInput.value) {
+					try {
+						underwriterIds = JSON.parse(underwriterInput.value);
+					} catch (e) {
+						console.error('Error parsing underwriter IDs:', e);
+					}
+				}
+
+				const metrics = Array.from(metricsContainer.querySelectorAll('.metric-row') || []).map((row) => ({
+				metric_name: row.querySelector('.metric-name')?.value?.trim() || 'return',
+				period_days: parseNumber(row.querySelector('.metric-period')?.value),
+				metric_value: parseNumber(row.querySelector('.metric-value')?.value),
+			})).filter((metric) => metric.period_days !== null || metric.metric_value !== null);
+
+			const payload = {
+				ticker_symbol: formData.get('ticker_symbol')?.toString().toUpperCase().trim(),
+				company_name: formData.get('company_name')?.toString().trim(),
+				ipo_date: formData.get('ipo_date')?.toString(),
+				general_sector: formData.get('general_sector')?.toString().trim() || null,
+				specific_sector: formData.get('specific_sector')?.toString().trim() || null,
+				shares_offered: parseNumber(formData.get('shares_offered')),
+				total_value: parseNumber(formData.get('total_value')),
+				ipo_price: parseNumber(formData.get('ipo_price')),
+				underwriter_ids: underwriterIds,
+				performance_metrics: metrics,
+				assets_growth_1y: parseNumber(formData.get('assets_growth_1y')),
+				liabilities_growth_1y: parseNumber(formData.get('liabilities_growth_1y')),
+				revenue_growth_1y: parseNumber(formData.get('revenue_growth_1y')),
+				net_income_growth_1y: parseNumber(formData.get('net_income_growth_1y')),
+				lead_underwriter: formData.get('lead_underwriter')?.toString().trim() || null,
+				accounting_firm: formData.get('accounting_firm')?.toString().trim() || null,
+			};
+
+			try {
+				const response = await fetch(`/api/ipo-listings/${listingId}`, {
+					method: 'PUT',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload),
+					credentials: 'include',
+				});
+
+				if (response.ok) {
+					alert('IPO listing berhasil diperbarui');
+					window.location.href = '/dashboard/ipo-listings';
+				} else {
+					const error = await response.json().catch(() => null);
+					alert(error?.error || 'Gagal memperbarui IPO listing');
+				}
+			} catch (error) {
+				alert('Terjadi kesalahan saat memperbarui IPO listing');
+			}
+			});
+		});
+	</script>
+</AdminLayout>

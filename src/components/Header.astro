@@ -49,13 +49,8 @@ import logo from '../assets/logo.png';
             </a>
           </li>
           <li>
-            <a href="/artikel" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
-              Artikel
-            </a>
-          </li>
-          <li>
-            <a href="/faq" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
-              FAQ
+            <a href="/underwriters" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+              History Underwriter IPO
             </a>
           </li>
         </ul>
@@ -64,17 +59,19 @@ import logo from '../assets/logo.png';
       <!-- Search dan Actions -->
       <div class="flex items-center space-x-4">
         <!-- Search Box -->
-        <div class="hidden sm:block relative">
+        <form action="/search" method="get" class="hidden sm:block relative">
           <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>
           <input 
             type="text" 
+            name="q"
+            id="search-input"
             placeholder="Cari berita..." 
             class="pl-10 pr-4 py-2 w-48 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
           >
-        </div>
+        </form>
         
 
         <!-- Mobile Menu Toggle -->
@@ -88,7 +85,7 @@ import logo from '../assets/logo.png';
   </div>
 </header>
 
-<!-- Mobile Menu (akan ditambahkan nanti) -->
+<!-- Mobile Menu -->
 <div class="md:hidden bg-white border-b border-gray-200 hidden" id="mobile-menu">
   <div class="px-4 py-2 space-y-1">
     <a href="/" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Beranda</a>
@@ -97,12 +94,28 @@ import logo from '../assets/logo.png';
     <a href="/pasar" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Pasar</a>
     <a href="/analisis" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Analisis</a>
     <a href="/kripto" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Kripto</a>
-    <a href="/artikel" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Artikel</a>
-    <a href="/faq" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">FAQ</a>
+    <a href="/underwriters" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">History Underwriter IPO</a>
+    
+    <!-- Mobile Search -->
+    <div class="px-3 py-2 border-t border-gray-200 mt-2 pt-4">
+      <form action="/search" method="get" class="relative">
+        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input 
+          type="text" 
+          name="q"
+          id="mobile-search-input"
+          placeholder="Cari berita..." 
+          class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
+        >
+      </form>
+    </div>
   </div>
 </div>
 
-<script>
+<script is:inline>
   // Mobile menu toggle functionality
   document.addEventListener('DOMContentLoaded', function() {
     const mobileMenuToggle = document.querySelector('[aria-label="Toggle mobile menu"]');
@@ -111,6 +124,26 @@ import logo from '../assets/logo.png';
     if (mobileMenuToggle && mobileMenu) {
       mobileMenuToggle.addEventListener('click', function() {
         mobileMenu.classList.toggle('hidden');
+      });
+    }
+
+    // Search form submit with Enter key
+    const searchInput = document.getElementById('search-input');
+    const mobileSearchInput = document.getElementById('mobile-search-input');
+    
+    if (searchInput) {
+      searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && this.value.trim()) {
+          this.closest('form')?.submit();
+        }
+      });
+    }
+
+    if (mobileSearchInput) {
+      mobileSearchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && this.value.trim()) {
+          this.closest('form')?.submit();
+        }
       });
     }
   });

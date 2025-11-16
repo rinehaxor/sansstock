@@ -1,0 +1,130 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../db/supabase';
+import UnderwritersTable from '../../../components/UnderwritersTable';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 10;
+const search = Astro.url.searchParams.get('search') || '';
+
+let query = supabase
+  .from('underwriters')
+  .select('id, name, created_at, updated_at', { count: 'exact' })
+  .order('created_at', { ascending: false })
+  .range((page - 1) * limit, page * limit - 1);
+
+if (search) {
+  query = query.ilike('name', `%${search}%`);
+}
+
+const { data: underwriters, error, count } = await query;
+
+if (error) {
+  console.error('Failed to load underwriters:', error);
+}
+
+const ids = underwriters?.map((item: any) => item.id) || [];
+let ipoCounts: Record<number, number> = {};
+
+if (ids.length > 0) {
+  // Count unique IPO listings per underwriter
+  const { data: usages, error: usageError } = await supabase
+    .from('ipo_underwriters')
+    .select('underwriter_id, ipo_listing_id')
+    .in('underwriter_id', ids);
+
+  if (!usageError && usages) {
+    // Group by underwriter_id and count unique ipo_listing_id
+    const uniqueCounts: Record<number, Set<number>> = {};
+    
+    usages.forEach((item: any) => {
+      if (!item?.underwriter_id || !item?.ipo_listing_id) return;
+      
+      if (!uniqueCounts[item.underwriter_id]) {
+        uniqueCounts[item.underwriter_id] = new Set();
+      }
+      uniqueCounts[item.underwriter_id].add(item.ipo_listing_id);
+    });
+
+    // Convert sets to counts
+    Object.keys(uniqueCounts).forEach((id) => {
+      ipoCounts[parseInt(id)] = uniqueCounts[parseInt(id)].size;
+    });
+  }
+}
+
+const totalPages = count ? Math.ceil(count / limit) : 1;
+---
+
+<AdminLayout title="Underwriter IPO" email={email}>
+	<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<div class="mb-8 flex items-center justify-between">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Kelola Underwriter IPO</h1>
+				<p class="mt-2 text-sm text-gray-600">Tambahkan atau kelola daftar underwriter</p>
+			</div>
+			<div class="flex gap-2">
+				<a 
+					href="/dashboard/underwriters/import"
+					class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+				>
+					<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+					</svg>
+					Import Bulk
+				</a>
+				<a 
+					href="/dashboard/underwriters/new"
+					class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+				>
+					<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+					</svg>
+					Underwriter Baru
+				</a>
+			</div>
+		</div>
+
+		<UnderwritersTable
+			client:load
+			underwriters={JSON.stringify(underwriters || [])}
+			ipoCounts={JSON.stringify(ipoCounts)}
+			currentPage={page}
+			totalPages={totalPages}
+			totalItems={count || 0}
+			itemsPerPage={limit}
+			paginationBaseUrl="/dashboard/underwriters"
+		/>
+	</div>
+</AdminLayout>
+

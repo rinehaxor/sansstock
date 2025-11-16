@@ -2,25 +2,26 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { getAuthenticatedSupabase, isAdmin } from '../../../lib/auth';
+import { apiRateLimit } from '../../../lib/ratelimit';
+import { createErrorResponse } from '../../../lib/error-handler';
 
 // GET /api/media - Get all uploaded images from storage
 export const GET: APIRoute = async (context) => {
+   const rateLimitError = apiRateLimit(context);
+   if (rateLimitError) {
+      return rateLimitError;
+   }
+
    // Get authenticated Supabase client
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-         status: 401,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse('UNAUTHORIZED', 401, 'GET /api/media');
    }
 
    // Check if user is admin
    const admin = await isAdmin(context);
    if (!admin) {
-      return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
-         status: 403,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse('FORBIDDEN', 403, 'GET /api/media');
    }
 
    try {
@@ -39,10 +40,7 @@ export const GET: APIRoute = async (context) => {
          });
 
       if (error) {
-         return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-         });
+         return createErrorResponse(error, 500, 'GET /api/media - list storage');
       }
 
       // Filter out folders
@@ -115,13 +113,7 @@ export const GET: APIRoute = async (context) => {
          }
       );
    } catch (error) {
-      return new Response(
-         JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
-         {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-         }
-      );
+      return createErrorResponse(error, 500, 'GET /api/media');
    }
 };
 

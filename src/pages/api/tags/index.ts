@@ -3,6 +3,9 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../db/supabase';
 import { isAdmin, getAuthenticatedUser, getAuthenticatedSupabase } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
+import { tagSchema, safeValidateAndSanitize } from '../../../lib/validation';
+import { apiRateLimit } from '../../../lib/ratelimit';
 
 // GET /api/tags - Public (semua bisa akses)
 export const GET: APIRoute = async ({ url }) => {
@@ -12,9 +15,13 @@ export const GET: APIRoute = async ({ url }) => {
 
       let query = supabase.from('tags').select('id, name, slug, description, created_at').order('name', { ascending: true });
 
-      // Search
+      // Search - sanitize input to prevent SQL injection
       if (search) {
-         query = query.or(`name.ilike.%${search}%,slug.ilike.%${search}%,description.ilike.%${search}%`);
+         const sanitizedSearch = search.replace(/[%_\\]/g, '').trim();
+         if (sanitizedSearch.length > 0) {
+            const escapedSearch = sanitizedSearch.replace(/[%_\\]/g, '\\$&');
+            query = query.or(`name.ilike.%${escapedSearch}%,slug.ilike.%${escapedSearch}%,description.ilike.%${escapedSearch}%`);
+         }
       }
 
       const { data, error } = await query;
@@ -45,6 +52,18 @@ export const GET: APIRoute = async ({ url }) => {
 
 // POST /api/tags - Admin only (RLS enforced)
 export const POST: APIRoute = async (context) => {
+   // Rate limiting - prevent DDoS
+   const rateLimitError = apiRateLimit(context);
+   if (rateLimitError) {
+      return rateLimitError;
+   }
+
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    // Get authenticated Supabase client (will enforce RLS)
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
@@ -65,15 +84,19 @@ export const POST: APIRoute = async (context) => {
 
    try {
       const body = await context.request.json();
-      const { name, slug, description } = body;
 
-      // Validation
-      if (!name || !slug) {
-         return new Response(JSON.stringify({ error: 'Name and slug are required' }), {
+      // Validate and sanitize input using Zod schema
+      const validationResult = safeValidateAndSanitize(tagSchema, body);
+
+      if (!validationResult.success) {
+         const errors = validationResult.error.errors.map((err) => `${err.path.join('.')}: ${err.message}`).join(', ');
+         return new Response(JSON.stringify({ error: 'Validation failed', details: errors }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' },
          });
       }
+
+      const { name, slug, description } = validationResult.data;
 
       // Check if slug already exists using authenticated client
       const { data: existingTag } = await authenticatedClient.from('tags').select('id').eq('slug', slug).single();

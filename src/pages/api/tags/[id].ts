@@ -3,6 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../db/supabase';
 import { isAdmin, getAuthenticatedSupabase } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
 
 // GET /api/tags/[id] - Public
 export const GET: APIRoute = async ({ params }) => {
@@ -39,6 +40,12 @@ export const GET: APIRoute = async ({ params }) => {
 
 // PUT /api/tags/[id] - Admin only (RLS enforced)
 export const PUT: APIRoute = async (context) => {
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    // Get authenticated Supabase client (will enforce RLS)
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
@@ -112,6 +119,12 @@ export const PUT: APIRoute = async (context) => {
 
 // DELETE /api/tags/[id] - Admin only (RLS enforced)
 export const DELETE: APIRoute = async (context) => {
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    // Get authenticated Supabase client (will enforce RLS)
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {

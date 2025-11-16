@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Card } from './ui/Card';
 
 interface PerformanceMetric {
    metric_name: string;
@@ -45,9 +44,9 @@ function getPeriodLabel(periodDays: number): string {
 
 export default function UnderwriterPerformance({ underwriters: underwritersJson }: UnderwriterPerformanceProps) {
    const [underwriters, setUnderwriters] = React.useState<Underwriter[]>([]);
-   const [selectedUnderwriter, setSelectedUnderwriter] = React.useState<Underwriter | null>(null);
-   const [sortBy, setSortBy] = React.useState<'name' | 'total_ipos' | 'avg_performance'>('name');
+   const [sortBy, setSortBy] = React.useState<'name' | 'total_ipos' | 'avg_performance'>('total_ipos');
    const [periodFilter, setPeriodFilter] = React.useState<number | null>(null);
+   const [searchQuery, setSearchQuery] = React.useState('');
 
    React.useEffect(() => {
       try {
@@ -59,23 +58,31 @@ export default function UnderwriterPerformance({ underwriters: underwritersJson 
       }
    }, [underwritersJson]);
 
-   // Sort underwriters
+   // Filter and sort underwriters
    const sortedUnderwriters = React.useMemo(() => {
-      const sorted = [...underwriters];
+      let filtered = [...underwriters];
+
+      // Filter by search query
+      if (searchQuery.trim()) {
+         const query = searchQuery.toLowerCase().trim();
+         filtered = filtered.filter((u) => u.name.toLowerCase().includes(query));
+      }
+
+      // Sort
       switch (sortBy) {
          case 'total_ipos':
-            return sorted.sort((a, b) => b.total_ipos - a.total_ipos);
+            return filtered.sort((a, b) => b.total_ipos - a.total_ipos);
          case 'avg_performance':
             const period = periodFilter || 30;
-            return sorted.sort((a, b) => {
+            return filtered.sort((a, b) => {
                const aAvg = a.performance_by_period[period]?.avg || 0;
                const bAvg = b.performance_by_period[period]?.avg || 0;
                return bAvg - aAvg;
             });
          default:
-            return sorted.sort((a, b) => a.name.localeCompare(b.name));
+            return filtered.sort((a, b) => a.name.localeCompare(b.name));
       }
-   }, [underwriters, sortBy, periodFilter]);
+   }, [underwriters, sortBy, periodFilter, searchQuery]);
 
    // Get available periods from all underwriters
    const availablePeriods = React.useMemo(() => {
@@ -90,7 +97,19 @@ export default function UnderwriterPerformance({ underwriters: underwritersJson 
       <div className="space-y-6">
          {/* Filters */}
          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
+               {/* Search */}
+               <div className="flex-1 w-full md:w-auto">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cari Underwriter</label>
+                  <input
+                     type="text"
+                     value={searchQuery}
+                     onChange={(e) => setSearchQuery(e.target.value)}
+                     placeholder="Cari nama underwriter..."
+                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+               </div>
+               {/* Sort */}
                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Urutkan berdasarkan</label>
                   <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -117,129 +136,97 @@ export default function UnderwriterPerformance({ underwriters: underwritersJson 
                   </div>
                )}
             </div>
-         </div>
-
-         {/* Underwriters Grid */}
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedUnderwriters.map((underwriter) => (
-               <Card key={underwriter.id} className="p-4 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedUnderwriter(underwriter)}>
-                  <div className="space-y-3">
-                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{underwriter.name}</h3>
-                        <p className="text-sm text-gray-500">Total IPO: {underwriter.total_ipos}</p>
-                     </div>
-
-                     {/* Performance Summary */}
-                     <div className="space-y-2">
-                        {availablePeriods.slice(0, 3).map((period) => {
-                           const perf = underwriter.performance_by_period[period];
-                           if (!perf) return null;
-
-                           return (
-                              <div key={period} className="flex justify-between items-center text-sm">
-                                 <span className="text-gray-600">{getPeriodLabel(period)}:</span>
-                                 <span className={`font-medium ${perf.avg >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatPercentage(perf.avg)}</span>
-                              </div>
-                           );
-                        })}
-                     </div>
-
-                     <button className="w-full mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium">Lihat Detail →</button>
-                  </div>
-               </Card>
-            ))}
-         </div>
-
-         {/* Detail Modal */}
-         {selectedUnderwriter && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-               <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="p-6">
-                     <div className="flex justify-between items-start mb-4">
-                        <div>
-                           <h2 className="text-2xl font-bold text-gray-900">{selectedUnderwriter.name}</h2>
-                           <p className="text-sm text-gray-500 mt-1">Total IPO: {selectedUnderwriter.total_ipos}</p>
-                        </div>
-                        <button onClick={() => setSelectedUnderwriter(null)} className="text-gray-400 hover:text-gray-600">
-                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                           </svg>
-                        </button>
-                     </div>
-
-                     {/* Performance Table */}
-                     <div className="mb-6">
-                        <h3 className="text-lg font-semibold mb-3">Rata-rata Performa</h3>
-                        <div className="overflow-x-auto">
-                           <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-50">
-                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Periode</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rata-rata</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Min</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Max</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Jumlah</th>
-                                 </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                 {availablePeriods.map((period) => {
-                                    const perf = selectedUnderwriter.performance_by_period[period];
-                                    if (!perf) return null;
-
-                                    return (
-                                       <tr key={period}>
-                                          <td className="px-4 py-3 text-sm text-gray-900">{getPeriodLabel(period)}</td>
-                                          <td className={`px-4 py-3 text-sm font-medium ${perf.avg >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatPercentage(perf.avg)}</td>
-                                          <td className={`px-4 py-3 text-sm ${perf.min >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatPercentage(perf.min)}</td>
-                                          <td className={`px-4 py-3 text-sm ${perf.max >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatPercentage(perf.max)}</td>
-                                          <td className="px-4 py-3 text-sm text-gray-500">{perf.count}</td>
-                                       </tr>
-                                    );
-                                 })}
-                              </tbody>
-                           </table>
-                        </div>
-                     </div>
-
-                     {/* IPO Listings */}
-                     <div>
-                        <h3 className="text-lg font-semibold mb-3">Daftar IPO</h3>
-                        <div className="space-y-2">
-                           {selectedUnderwriter.ipo_listings.map((ipo) => (
-                              <div key={ipo.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                                 <div className="flex justify-between items-start">
-                                    <div>
-                                       <div className="font-medium text-gray-900">
-                                          {ipo.ticker_symbol} - {ipo.company_name}
-                                       </div>
-                                       <div className="text-sm text-gray-500">
-                                          {new Date(ipo.ipo_date).toLocaleDateString('id-ID', {
-                                             year: 'numeric',
-                                             month: 'long',
-                                             day: 'numeric',
-                                          })}
-                                       </div>
-                                    </div>
-                                    <div className="text-right">
-                                       {ipo.ipo_performance_metrics && ipo.ipo_performance_metrics.length > 0 && (
-                                          <div className="space-y-1">
-                                             {ipo.ipo_performance_metrics.slice(0, 3).map((metric, idx) => (
-                                                <div key={idx} className={`text-xs ${metric.metric_value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                   {getPeriodLabel(metric.period_days)}: {formatPercentage(metric.metric_value)}
-                                                </div>
-                                             ))}
-                                          </div>
-                                       )}
-                                    </div>
-                                 </div>
-                              </div>
-                           ))}
-                        </div>
-                     </div>
-                  </div>
+            {searchQuery && (
+               <div className="mt-3 text-sm text-gray-600">
+                  Menampilkan {sortedUnderwriters.length} dari {underwriters.length} underwriter
                </div>
+            )}
+         </div>
+
+         {/* Underwriters Table */}
+         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+               <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                     <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                           Nama Underwriter
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                           Total IPO
+                        </th>
+                        {availablePeriods.length > 0 && (
+                           availablePeriods.slice(0, 4).map((period) => (
+                              <th key={period} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                 {getPeriodLabel(period)}
+                              </th>
+                           ))
+                        )}
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                           Aksi
+                        </th>
+                     </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                     {sortedUnderwriters.length === 0 ? (
+                        <tr>
+                           <td colSpan={2 + availablePeriods.slice(0, 4).length + 1} className="px-6 py-8 text-center text-sm text-gray-500">
+                              {searchQuery ? 'Tidak ada underwriter yang ditemukan' : 'Belum ada data underwriter'}
+                           </td>
+                        </tr>
+                     ) : (
+                        sortedUnderwriters.map((underwriter) => (
+                           <tr 
+                              key={underwriter.id} 
+                              className="hover:bg-gray-50 transition-colors cursor-pointer"
+                              onClick={() => window.location.href = `/underwriters/${underwriter.id}`}
+                           >
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                 <div className="text-sm font-semibold text-gray-900">{underwriter.name}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {underwriter.total_ipos} IPO
+                                 </span>
+                              </td>
+                              {availablePeriods.length > 0 && (
+                                 availablePeriods.slice(0, 4).map((period) => {
+                                    const perf = underwriter.performance_by_period[period];
+                                    if (!perf) {
+                                       return (
+                                          <td key={period} className="px-6 py-4 whitespace-nowrap">
+                                             <span className="text-sm text-gray-400">-</span>
+                                          </td>
+                                       );
+                                    }
+                                    return (
+                                       <td key={period} className="px-6 py-4 whitespace-nowrap">
+                                          <span className={`text-sm font-semibold ${perf.avg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                             {formatPercentage(perf.avg)}
+                                          </span>
+                                       </td>
+                                    );
+                                 })
+                              )}
+                              <td className="px-6 py-4 whitespace-nowrap text-right">
+                                 <a
+                                    href={`/underwriters/${underwriter.id}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800"
+                                 >
+                                    Lihat Detail
+                                    <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                 </a>
+                              </td>
+                           </tr>
+                        ))
+                     )}
+                  </tbody>
+               </table>
             </div>
-         )}
+         </div>
       </div>
    );
 }

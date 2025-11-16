@@ -1,7 +1,9 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+const CSRF_STORAGE_KEY = 'sansstocks.csrfToken';
 
 // Validation schema
 const loginSchema = z.object({
@@ -14,6 +16,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginForm() {
    const [isSubmitting, setIsSubmitting] = useState(false);
    const [error, setError] = useState<string | null>(null);
+   const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
    const {
       register,
@@ -23,11 +26,43 @@ export default function LoginForm() {
       resolver: zodResolver(loginSchema),
    });
 
+   const fetchCsrfToken = useCallback(async () => {
+      try {
+         const response = await fetch('/api/auth/csrf-token', {
+            method: 'GET',
+            credentials: 'include',
+         });
+
+         if (!response.ok) {
+            throw new Error('Gagal mengambil CSRF token');
+         }
+
+         const { csrfToken: token } = (await response.json()) as { csrfToken: string };
+         setCsrfToken(token);
+         try {
+            localStorage.setItem(CSRF_STORAGE_KEY, token);
+         } catch {
+            // Ignore storage errors (e.g., private mode)
+         }
+         return token;
+      } catch (err) {
+         console.error('Failed to fetch CSRF token', err);
+         throw err;
+      }
+   }, []);
+
+   useEffect(() => {
+      fetchCsrfToken().catch(() => {
+         setError('Gagal menyiapkan proteksi keamanan. Refresh halaman dan coba lagi.');
+      });
+   }, [fetchCsrfToken]);
+
    const onSubmit = async (data: LoginFormData) => {
       setIsSubmitting(true);
       setError(null);
 
       try {
+         const token = csrfToken || (await fetchCsrfToken());
          const formData = new FormData();
          formData.append('email', data.email);
          formData.append('password', data.password);
@@ -36,14 +71,30 @@ export default function LoginForm() {
             method: 'POST',
             body: formData,
             credentials: 'include',
+            headers: {
+               'X-CSRF-Token': token,
+            },
          });
 
          if (!response.ok) {
-            const errorMessage = await response.text();
+            if (response.status === 403) {
+               await fetchCsrfToken();
+               throw new Error('Sesi keamanan kedaluwarsa. Silakan coba lagi.');
+            }
+            const errorData = await response.json().catch(() => null);
+            const errorMessage = errorData?.error || 'Login gagal';
             throw new Error(errorMessage);
          }
 
          const result = await response.json();
+         if (result.csrfToken) {
+            setCsrfToken(result.csrfToken);
+            try {
+               localStorage.setItem(CSRF_STORAGE_KEY, result.csrfToken);
+            } catch {
+               // ignore
+            }
+         }
 
          // Redirect ke dashboard setelah berhasil
          // Gunakan replace untuk menghindari back button ke login page

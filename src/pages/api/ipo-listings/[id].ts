@@ -3,6 +3,61 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../db/supabase';
 import { getAuthenticatedSupabase, getAuthenticatedUser, isAdmin } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
+
+const normalizeIpoListing = (record: any) => {
+   if (!record) {
+      return record;
+   }
+
+   const toNumber = (value: unknown) => (value === null || value === undefined ? null : Number(value));
+
+   const normalizeUnderwriterLink = (entry: any) => {
+      if (!entry) {
+         return entry;
+      }
+
+      return {
+         ...entry,
+         id: toNumber(entry.id),
+         ipo_listing_id: toNumber(entry.ipo_listing_id),
+         underwriter_id: toNumber(entry.underwriter_id),
+         underwriter: entry.underwriter
+            ? {
+                 ...entry.underwriter,
+                 id: toNumber(entry.underwriter.id),
+              }
+            : null,
+      };
+   };
+
+   const normalizePerformanceMetric = (entry: any) => {
+      if (!entry) {
+         return entry;
+      }
+
+      return {
+         ...entry,
+         id: toNumber(entry.id),
+         ipo_listing_id: toNumber(entry.ipo_listing_id),
+         metric_value: toNumber(entry.metric_value),
+         period_days: toNumber(entry.period_days),
+      };
+   };
+
+   return {
+      ...record,
+      shares_offered: toNumber(record.shares_offered),
+      total_value: toNumber(record.total_value),
+      ipo_price: toNumber(record.ipo_price),
+      assets_growth_1y: toNumber(record.assets_growth_1y),
+      liabilities_growth_1y: toNumber(record.liabilities_growth_1y),
+      revenue_growth_1y: toNumber(record.revenue_growth_1y),
+      net_income_growth_1y: toNumber(record.net_income_growth_1y),
+      ipo_underwriters: (record.ipo_underwriters || []).map(normalizeUnderwriterLink),
+      ipo_performance_metrics: (record.ipo_performance_metrics || []).map(normalizePerformanceMetric),
+   };
+};
 
 // GET /api/ipo-listings/[id] - Public
 export const GET: APIRoute = async ({ params }) => {
@@ -54,7 +109,7 @@ export const GET: APIRoute = async ({ params }) => {
          });
       }
 
-      return new Response(JSON.stringify({ data }), {
+      return new Response(JSON.stringify({ data: normalizeIpoListing(data) }), {
          status: 200,
          headers: { 'Content-Type': 'application/json' },
       });
@@ -68,6 +123,12 @@ export const GET: APIRoute = async ({ params }) => {
 
 // PUT /api/ipo-listings/[id] - Admin only
 export const PUT: APIRoute = async (context) => {
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
       return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
@@ -106,6 +167,13 @@ export const PUT: APIRoute = async (context) => {
          ipo_price,
          underwriter_ids,
          performance_metrics,
+         assets_growth_1y,
+         liabilities_growth_1y,
+         revenue_growth_1y,
+         net_income_growth_1y,
+         lead_underwriter,
+         accounting_firm,
+         legal_consultant,
       } = body;
 
       // Update IPO listing
@@ -118,6 +186,13 @@ export const PUT: APIRoute = async (context) => {
       if (shares_offered !== undefined) updateData.shares_offered = shares_offered ? BigInt(shares_offered) : null;
       if (total_value !== undefined) updateData.total_value = total_value;
       if (ipo_price !== undefined) updateData.ipo_price = ipo_price;
+      if (assets_growth_1y !== undefined) updateData.assets_growth_1y = assets_growth_1y;
+      if (liabilities_growth_1y !== undefined) updateData.liabilities_growth_1y = liabilities_growth_1y;
+      if (revenue_growth_1y !== undefined) updateData.revenue_growth_1y = revenue_growth_1y;
+      if (net_income_growth_1y !== undefined) updateData.net_income_growth_1y = net_income_growth_1y;
+      if (lead_underwriter !== undefined) updateData.lead_underwriter = lead_underwriter;
+      if (accounting_firm !== undefined) updateData.accounting_firm = accounting_firm;
+      if (legal_consultant !== undefined) updateData.legal_consultant = legal_consultant;
 
       const { data: ipoListing, error: ipoError } = await authenticatedClient
          .from('ipo_listings')
@@ -190,7 +265,7 @@ export const PUT: APIRoute = async (context) => {
          .eq('id', id)
          .single();
 
-      return new Response(JSON.stringify({ data: completeListing }), {
+      return new Response(JSON.stringify({ data: normalizeIpoListing(completeListing) }), {
          status: 200,
          headers: { 'Content-Type': 'application/json' },
       });
@@ -204,6 +279,12 @@ export const PUT: APIRoute = async (context) => {
 
 // DELETE /api/ipo-listings/[id] - Admin only
 export const DELETE: APIRoute = async (context) => {
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
       return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
@@ -250,4 +331,3 @@ export const DELETE: APIRoute = async (context) => {
       });
    }
 };
-

@@ -20,6 +20,12 @@ CREATE TABLE IF NOT EXISTS ipo_listings (
     shares_offered BIGINT,
     total_value NUMERIC(18, 2),
     ipo_price NUMERIC(10, 2),
+    assets_growth_1y NUMERIC(10, 2),
+    liabilities_growth_1y NUMERIC(10, 2),
+    revenue_growth_1y NUMERIC(10, 2),
+    net_income_growth_1y NUMERIC(10, 2),
+    lead_underwriter TEXT,
+    accounting_firm TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -64,16 +70,19 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- 7. Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_underwriters_updated_at ON underwriters;
 CREATE TRIGGER update_underwriters_updated_at
     BEFORE UPDATE ON underwriters
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_ipo_listings_updated_at ON ipo_listings;
 CREATE TRIGGER update_ipo_listings_updated_at
     BEFORE UPDATE ON ipo_listings
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_ipo_performance_metrics_updated_at ON ipo_performance_metrics;
 CREATE TRIGGER update_ipo_performance_metrics_updated_at
     BEFORE UPDATE ON ipo_performance_metrics
     FOR EACH ROW

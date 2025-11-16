@@ -3,6 +3,11 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../db/supabase';
 import { isAdmin, getAuthenticatedUser, getAuthenticatedSupabase } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
+import { articleSchema, safeValidateAndSanitize } from '../../../lib/validation';
+import { apiRateLimit } from '../../../lib/ratelimit';
+import { createErrorResponse, createSuccessResponse, createValidationErrorResponse, ErrorMessages } from '../../../lib/error-handler';
+import { sanitizeArticleContent } from '../../../lib/sanitize';
 
 // GET /api/articles/[id] - Public
 export const GET: APIRoute = async ({ params }) => {
@@ -54,61 +59,50 @@ export const GET: APIRoute = async ({ params }) => {
 		}
 
 		if (error) {
-			return new Response(JSON.stringify({ error: error.message }), {
-				status: error.code === 'PGRST116' ? 404 : 500,
-				headers: { 'Content-Type': 'application/json' },
-			});
+			const statusCode = error.code === 'PGRST116' ? 404 : 500;
+			return createErrorResponse(error, statusCode, 'GET /api/articles/[id]');
 		}
 
 		// For public, only show published articles
 		if (data.status !== 'published') {
-			return new Response(JSON.stringify({ error: 'Article not found' }), {
-				status: 404,
-				headers: { 'Content-Type': 'application/json' },
-			});
+			return createErrorResponse(ErrorMessages.ARTICLE_NOT_FOUND, 404, 'GET /api/articles/[id]');
 		}
 
-		return new Response(JSON.stringify({ data }), {
-			status: 200,
-			headers: { 'Content-Type': 'application/json' },
-		});
+		return createSuccessResponse(data);
 	} catch (error) {
-		return new Response(
-			JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
-			{
-				status: 500,
-				headers: { 'Content-Type': 'application/json' },
-			}
-		);
+		return createErrorResponse(error, 500, 'GET /api/articles/[id]');
 	}
 };
 
 // PUT /api/articles/[id] - Admin only (RLS enforced)
 export const PUT: APIRoute = async (context) => {
+	// Rate limiting - prevent DDoS
+	const rateLimitError = apiRateLimit(context);
+	if (rateLimitError) {
+		return rateLimitError;
+	}
+
+	// CSRF Protection
+	const csrfError = csrfProtection(context);
+	if (csrfError) {
+		return csrfError;
+	}
+
 	// Get authenticated Supabase client (will enforce RLS)
 	const authenticatedClient = await getAuthenticatedSupabase(context);
 	if (!authenticatedClient) {
-		return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-			status: 401,
-			headers: { 'Content-Type': 'application/json' },
-		});
+		return createErrorResponse(ErrorMessages.UNAUTHORIZED, 401, 'PUT /api/articles/[id]');
 	}
 
 	// Check if user is admin
 	const admin = await isAdmin(context);
 	if (!admin) {
-		return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
-			status: 403,
-			headers: { 'Content-Type': 'application/json' },
-		});
+		return createErrorResponse(ErrorMessages.FORBIDDEN, 403, 'PUT /api/articles/[id]');
 	}
 
 	const user = await getAuthenticatedUser(context);
 	if (!user) {
-		return new Response(JSON.stringify({ error: 'User not found' }), {
-			status: 401,
-			headers: { 'Content-Type': 'application/json' },
-		});
+		return createErrorResponse(ErrorMessages.UNAUTHORIZED, 401, 'PUT /api/articles/[id]');
 	}
 
 	try {
@@ -121,6 +115,17 @@ export const PUT: APIRoute = async (context) => {
 		}
 
 		const body = await context.request.json();
+
+		// Validate and sanitize input using Zod schema
+		const validationResult = safeValidateAndSanitize(articleSchema, body);
+
+		if (!validationResult.success) {
+			return createValidationErrorResponse(
+				validationResult.error.errors,
+				validationResult.error.errors.map((err) => `${err.path.join('.')}: ${err.message}`).join(', ')
+			);
+		}
+
 		const {
 			title,
 			slug,
@@ -137,7 +142,10 @@ export const PUT: APIRoute = async (context) => {
 			tag_ids,
 			url_original,
 			featured,
-		} = body;
+		} = validationResult.data;
+
+		// Sanitize article content to prevent XSS
+		const sanitizedContent = content ? sanitizeArticleContent(content) : undefined;
 
 		// Build update object
 		const updateData: any = {
@@ -151,7 +159,7 @@ export const PUT: APIRoute = async (context) => {
 		if (meta_title !== undefined) updateData.meta_title = meta_title;
 		if (meta_description !== undefined) updateData.meta_description = meta_description;
 		if (meta_keywords !== undefined) updateData.meta_keywords = meta_keywords;
-		if (content) updateData.content = content;
+		if (sanitizedContent) updateData.content = sanitizedContent; // Use sanitized content
 		if (thumbnail_url !== undefined) updateData.thumbnail_url = thumbnail_url;
 		if (thumbnail_alt !== undefined) updateData.thumbnail_alt = thumbnail_alt || null;
 		if (category_id) updateData.category_id = category_id;
@@ -183,10 +191,7 @@ export const PUT: APIRoute = async (context) => {
 			.single();
 
 		if (articleError) {
-			return new Response(JSON.stringify({ error: articleError.message }), {
-				status: 500,
-				headers: { 'Content-Type': 'application/json' },
-			});
+			return createErrorResponse(articleError, 500, 'PUT /api/articles/[id] - update');
 		}
 
 		// Update tags if provided (also using authenticated client)
@@ -225,39 +230,36 @@ export const PUT: APIRoute = async (context) => {
 			}
 		}
 
-		return new Response(JSON.stringify({ data: article }), {
-			status: 200,
-			headers: { 'Content-Type': 'application/json' },
-		});
+		return createSuccessResponse(article);
 	} catch (error) {
-		return new Response(
-			JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
-			{
-				status: 500,
-				headers: { 'Content-Type': 'application/json' },
-			}
-		);
+		return createErrorResponse(error, 500, 'PUT /api/articles/[id]');
 	}
 };
 
 // DELETE /api/articles/[id] - Admin only (RLS enforced)
 export const DELETE: APIRoute = async (context) => {
+	// Rate limiting - prevent DDoS
+	const rateLimitError = apiRateLimit(context);
+	if (rateLimitError) {
+		return rateLimitError;
+	}
+
+	// CSRF Protection
+	const csrfError = csrfProtection(context);
+	if (csrfError) {
+		return csrfError;
+	}
+
 	// Get authenticated Supabase client (will enforce RLS)
 	const authenticatedClient = await getAuthenticatedSupabase(context);
 	if (!authenticatedClient) {
-		return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-			status: 401,
-			headers: { 'Content-Type': 'application/json' },
-		});
+		return createErrorResponse(ErrorMessages.UNAUTHORIZED, 401, 'DELETE /api/articles/[id]');
 	}
 
 	// Check if user is admin
 	const admin = await isAdmin(context);
 	if (!admin) {
-		return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
-			status: 403,
-			headers: { 'Content-Type': 'application/json' },
-		});
+		return createErrorResponse(ErrorMessages.FORBIDDEN, 403, 'DELETE /api/articles/[id]');
 	}
 
 	try {
@@ -285,24 +287,12 @@ export const DELETE: APIRoute = async (context) => {
 		const { error } = await authenticatedClient.from('articles').delete().eq('id', articleId);
 
 		if (error) {
-			return new Response(JSON.stringify({ error: error.message }), {
-				status: 500,
-				headers: { 'Content-Type': 'application/json' },
-			});
+			return createErrorResponse(error, 500, 'DELETE /api/articles/[id]');
 		}
 
-		return new Response(JSON.stringify({ message: 'Article deleted successfully' }), {
-			status: 200,
-			headers: { 'Content-Type': 'application/json' },
-		});
+		return createSuccessResponse({ message: 'Article deleted successfully' });
 	} catch (error) {
-		return new Response(
-			JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
-			{
-				status: 500,
-				headers: { 'Content-Type': 'application/json' },
-			}
-		);
+		return createErrorResponse(error, 500, 'DELETE /api/articles/[id]');
 	}
 };
 

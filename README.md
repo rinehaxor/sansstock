@@ -1,73 +1,39 @@
-# Astro Starter Kit: Basics
+# SansStocks
 
-```sh
-npm create astro@latest -- --template basics
-```
+SansStocks adalah portal berita dan riset pasar modal Indonesia yang dibangun dengan Astro + React. Repositori ini memuat halaman publik, dashboard internal untuk redaksi, API routes (artikel, pasar, autentikasi), serta komponen UI re-useable.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Menjalankan Proyek
 
-## 🚀 Project Structure
+Semua perintah dijalankan dari root repo:
 
-Inside of your Astro project, you'll see the following folders and files:
+| Perintah          | Penjelasan                                         |
+| ----------------- | -------------------------------------------------- |
+| `npm install`     | Menginstal semua dependensi                        |
+| `npm run dev`     | Server pengembangan di `http://localhost:4321`     |
+| `npm run build`   | Build produksi ke folder `dist/`                   |
+| `npm run preview` | Menjalankan preview hasil build                    |
 
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src
-│   ├── assets
-│   │   └── astro.svg
-│   ├── components
-│   │   └── Welcome.astro
-│   ├── layouts
-│   │   └── Layout.astro
-│   └── pages
-│       └── index.astro
-└── package.json
-```
+## Konfigurasi Environment
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 🔧 Environment Variables
-
-Buat file `.env` di root project dengan konfigurasi berikut:
+Buat file `.env` dan isi minimal variabel berikut:
 
 ```env
-# Supabase Configuration (Required)
 SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Site URL (Optional)
-# Jika tidak diisi, website akan otomatis detect dari request URL
-# Format: https://yourdomain.com (tanpa trailing slash)
 # SITE_URL=https://sansstocks.com
 ```
 
-### Catatan tentang Site URL:
+Jika `SITE_URL` tidak diset, aplikasi otomatis mendeteksi host dari request yang masuk. Pastikan nilai produksi tidak memakai trailing slash.
 
-- **Development**: Jika `SITE_URL` tidak diisi, website akan otomatis menggunakan URL dari request (misal: `http://localhost:4321`)
-- **Production**: Setelah deploy, Anda bisa:
-  1. Set environment variable `SITE_URL` di hosting provider Anda, ATAU
-  2. Biarkan kosong dan website akan otomatis detect dari domain yang digunakan
+## Ringkasan Keamanan Saat Ini
 
-**Prioritas Site URL:**
-1. Environment variable `SITE_URL` (jika ada)
-2. Astro config `site` (jika ada)
-3. Request URL (otomatis detect)
+Audit internal mencatat sejumlah celah yang sedang dikerjakan. Ringkasan ini perlu dibaca sebelum melakukan deployment:
 
-## 👀 Want to learn more?
+- Tidak ada CSRF protection – seluruh form/API berbasis cookies masih rentan terhadap cross-site request forgery.
+- Validasi/sanitasi input belum konsisten – risiko XSS dan SQL injection masih tinggi jika data masuk langsung diteruskan ke DB/DOM.
+- Tidak ada rate limiting di API penting – endpoint login, artikel, dan pasar bisa menjadi target brute force maupun DDoS.
+- Pesan error masih terlalu detail – stack trace dan detail query dapat membocorkan arsitektur sistem saat terjadi kegagalan.
+- Konfigurasi cookie perlu diperketat – terapkan `sameSite: 'strict'`, `secure`, dan `httpOnly` untuk sesi production.
+- Tidak ada validasi environment variables saat startup – kesalahan konfigurasi baru diketahui ketika fitur tertentu dijalankan.
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Detail rencana mitigasi ada di `SECURITY_AUDIT_REPORT.md`, `CSRF_IMPLEMENTATION.md`, `VALIDATION_IMPLEMENTATION.md`, `RATE_LIMITING_IMPLEMENTATION.md`, dan dokumen pendukung lainnya di root repo. Perbarui bagian ini setelah kontrol keamanan selesai diterapkan.

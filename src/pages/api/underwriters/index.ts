@@ -3,11 +3,20 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../db/supabase';
 import { getAuthenticatedSupabase, getAuthenticatedUser, isAdmin } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
+import { publicRateLimit, apiRateLimit } from '../../../lib/ratelimit';
+import { createErrorResponse, createValidationErrorResponse } from '../../../lib/error-handler';
+import { safeValidateAndSanitize, underwriterSchema } from '../../../lib/validation';
 
 // GET /api/underwriters - Public
-export const GET: APIRoute = async ({ request, url }) => {
+export const GET: APIRoute = async (context) => {
+   const rateLimitError = publicRateLimit(context);
+   if (rateLimitError) {
+      return rateLimitError;
+   }
+
    try {
-      const searchParams = url.searchParams;
+      const searchParams = context.url.searchParams;
       const search = searchParams.get('search');
       const includeStats = searchParams.get('include_stats') === 'true';
 
@@ -44,10 +53,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       const { data, error, count } = await query;
 
       if (error) {
-         return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-         });
+         return createErrorResponse(error, 500, 'GET /api/underwriters');
       }
 
       // If includeStats is true, calculate performance stats
@@ -102,42 +108,42 @@ export const GET: APIRoute = async ({ request, url }) => {
          }
       );
    } catch (error) {
-      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }), {
-         status: 500,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse(error, 500, 'GET /api/underwriters');
    }
 };
 
 // POST /api/underwriters - Admin only
 export const POST: APIRoute = async (context) => {
+   const rateLimitError = apiRateLimit(context);
+   if (rateLimitError) {
+      return rateLimitError;
+   }
+
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-         status: 401,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse('UNAUTHORIZED', 401, 'POST /api/underwriters');
    }
 
    const admin = await isAdmin(context);
    if (!admin) {
-      return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
-         status: 403,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse('FORBIDDEN', 403, 'POST /api/underwriters');
    }
 
    try {
       const body = await context.request.json();
-      const { name } = body;
+      const validationResult = safeValidateAndSanitize(underwriterSchema, body);
 
-      // Validation
-      if (!name) {
-         return new Response(JSON.stringify({ error: 'Missing required field: name' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-         });
+      if (!validationResult.success) {
+         return createValidationErrorResponse(validationResult.error.errors);
       }
+
+      const { name } = validationResult.data;
 
       // Create or get underwriter (upsert)
       const { data: underwriter, error: underwriterError } = await authenticatedClient
@@ -147,10 +153,7 @@ export const POST: APIRoute = async (context) => {
          .single();
 
       if (underwriterError) {
-         return new Response(JSON.stringify({ error: underwriterError.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-         });
+         return createErrorResponse(underwriterError, 500, 'POST /api/underwriters');
       }
 
       return new Response(JSON.stringify({ data: underwriter }), {
@@ -158,10 +161,6 @@ export const POST: APIRoute = async (context) => {
          headers: { 'Content-Type': 'application/json' },
       });
    } catch (error) {
-      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }), {
-         status: 500,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse(error, 500, 'POST /api/underwriters');
    }
 };
-

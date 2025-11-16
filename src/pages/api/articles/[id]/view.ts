@@ -1,7 +1,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { supabase } from '../../../../db/supabase';
+import { supabase, supabaseAdmin } from '../../../../db/supabase';
 
 // POST /api/articles/[id]/view - Public endpoint to increment view count
 export const POST: APIRoute = async ({ params }) => {
@@ -60,32 +60,59 @@ export const POST: APIRoute = async ({ params }) => {
 			});
 		}
 
-		// Increment views_count
-		const currentViews = articleData.views_count || 0;
-		const newViewsCount = currentViews + 1;
-
-		const { data: updateData, error: updateError } = await supabase
-			.from('articles')
-			.update({ views_count: newViewsCount })
-			.eq('id', articleId)
-			.select('views_count')
-			.single();
+		// Use admin client to bypass RLS for view tracking (server-side only, secure)
+		const clientToUse = supabaseAdmin || supabase;
+		
+		// Try RPC function first (atomic increment)
+		let updateData: any = null;
+		let updateError: any = null;
+		
+		try {
+			const rpcResult = await clientToUse.rpc('increment_article_views', {
+				article_id: articleId
+			});
+			
+			if (rpcResult.data !== null && rpcResult.data !== undefined) {
+				// RPC returned a number directly
+				updateData = { views_count: rpcResult.data };
+			} else if (rpcResult.error) {
+				throw rpcResult.error;
+			}
+		} catch (rpcError) {
+			// RPC doesn't exist or failed, use direct update
+			const currentViews = articleData.views_count || 0;
+			const newViewsCount = currentViews + 1;
+			
+			const { data, error } = await clientToUse
+				.from('articles')
+				.update({ views_count: newViewsCount })
+				.eq('id', articleId)
+				.select('views_count')
+				.single();
+			
+			updateData = data;
+			updateError = error;
+		}
 
 		if (updateError) {
 			console.error('Error updating views_count:', updateError);
 			return new Response(JSON.stringify({ 
 				error: updateError.message,
 				code: updateError.code,
-				details: updateError.details 
+				details: updateError.details,
+				hint: updateError.hint || 'Failed to update views_count. Check RLS policies or use service role key.'
 			}), {
 				status: 500,
 				headers: { 'Content-Type': 'application/json' },
 			});
 		}
 
+		// Get final views count
+		const finalViewsCount = updateData?.views_count || articleData.views_count + 1;
+
 		return new Response(JSON.stringify({ 
 			success: true, 
-			views_count: updateData?.views_count || newViewsCount 
+			views_count: finalViewsCount 
 		}), {
 			status: 200,
 			headers: { 'Content-Type': 'application/json' },

@@ -57,18 +57,38 @@ const { title = 'Dashboard', email = '' } = Astro.props;
 							<div class="nav-indicator"></div>
 						</a>
 						
-						<a href="/dashboard/articles" class="nav-item" data-path="/dashboard/articles">
-							<div class="flex items-center">
-								<div class="nav-icon-wrapper">
-									<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-									</svg>
-								</div>
-								<span class="nav-text">Artikel</span>
+					<a href="/dashboard/articles" class="nav-item" data-path="/dashboard/articles">
+						<div class="flex items-center">
+							<div class="nav-icon-wrapper">
+								<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+								</svg>
 							</div>
-						</a>
+							<span class="nav-text">Artikel</span>
+						</div>
+					</a>
 
+					<a href="/dashboard/ipo-listings" class="nav-item" data-path="/dashboard/ipo-listings">
+						<div class="flex items-center">
+							<div class="nav-icon-wrapper">
+								<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M9 3v4m6-4v4m2 4H7l-2 9h14l-2-9z"></path>
+								</svg>
+							</div>
+							<span class="nav-text">IPO Listings</span>
+						</div>
+					</a>
 
+					<a href="/dashboard/underwriters" class="nav-item" data-path="/dashboard/underwriters">
+						<div class="flex items-center">
+							<div class="nav-icon-wrapper">
+								<svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+								</svg>
+							</div>
+							<span class="nav-text">Underwriters</span>
+						</div>
+					</a>
 
 						
 
@@ -148,6 +168,192 @@ const { title = 'Dashboard', email = '' } = Astro.props;
 				</main>
 			</div>
 		<Toaster client:load />
+		<script type="module" is:inline>
+			if (typeof window !== 'undefined') {
+				(() => {
+					const CSRF_STORAGE_KEY = 'sansstocks.csrfToken';
+					const CSRF_HEADER = 'X-CSRF-Token';
+					const originalFetch = window.fetch.bind(window);
+					let inFlightTokenPromise = null;
+
+					const readStoredToken = () => {
+						try {
+							return localStorage.getItem(CSRF_STORAGE_KEY);
+						} catch (error) {
+							console.warn('Unable to read CSRF token from storage', error);
+							return null;
+						}
+					};
+
+					const storeToken = (token) => {
+						try {
+							localStorage.setItem(CSRF_STORAGE_KEY, token);
+						} catch (error) {
+							console.warn('Unable to persist CSRF token', error);
+						}
+					};
+
+					const requestNewToken = async () => {
+						const response = await originalFetch('/api/auth/csrf-token', {
+							method: 'GET',
+							credentials: 'include',
+						});
+
+						if (!response.ok) {
+							throw new Error('Failed to fetch CSRF token');
+						}
+
+						const data = await response.json();
+						storeToken(data.csrfToken);
+						return data.csrfToken;
+					};
+
+					const getToken = async (force = false) => {
+						if (!force) {
+							const cached = readStoredToken();
+							if (cached) {
+								return cached;
+							}
+						}
+
+						if (!inFlightTokenPromise) {
+							inFlightTokenPromise = requestNewToken()
+								.catch((error) => {
+									console.error('Unable to refresh CSRF token', error);
+									throw error;
+								})
+								.finally(() => {
+									inFlightTokenPromise = null;
+								});
+						}
+
+						return inFlightTokenPromise;
+					};
+
+					const shouldAttachCsrf = (input, method) => {
+						if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') {
+							return false;
+						}
+
+						const resolveOrigin = () => {
+							if (input instanceof Request) {
+								return new URL(input.url, window.location.origin).origin;
+							}
+
+							if (typeof input === 'string') {
+								try {
+									return new URL(input, window.location.origin).origin;
+								} catch {
+									return window.location.origin;
+								}
+							}
+
+							if (input instanceof URL) {
+								return input.origin;
+							}
+
+							return window.location.origin;
+						};
+
+						return resolveOrigin() === window.location.origin;
+					};
+
+					window.fetch = async (input, init = {}) => {
+						const method = (
+							init.method ||
+							(input instanceof Request ? input.method : 'GET') ||
+							'GET'
+						).toUpperCase();
+
+						if (!shouldAttachCsrf(input, method)) {
+							return originalFetch(input, init);
+						}
+
+						const headers = new Headers(
+							init.headers || (input instanceof Request ? input.headers : undefined) || undefined
+						);
+
+						const token = await getToken();
+						if (token) {
+							headers.set(CSRF_HEADER, token);
+						}
+
+						const finalInit = {
+							...init,
+							headers,
+							credentials: init.credentials || 'include',
+						};
+
+						const performRequest = () => {
+							if (input instanceof Request) {
+								return originalFetch(new Request(input, finalInit));
+							}
+							return originalFetch(input, finalInit);
+						};
+
+						let response = await performRequest();
+
+						if (response.status === 403) {
+							try {
+								const data = await response.clone().json();
+								if (typeof data?.error === 'string' && data.error.toLowerCase().includes('csrf')) {
+									await getToken(true);
+									const retryToken = await getToken();
+									if (retryToken) {
+										headers.set(CSRF_HEADER, retryToken);
+									}
+
+									response = input instanceof Request
+										? await originalFetch(new Request(input, { ...finalInit, headers }))
+										: await originalFetch(input, { ...finalInit, headers });
+								}
+							} catch (error) {
+								console.warn('Failed to handle CSRF retry', error);
+							}
+						}
+
+						return response;
+					};
+
+					getToken().catch(() => {
+						console.warn('Unable to initialize CSRF token');
+					});
+
+					window.addEventListener('focus', () => {
+						getToken(true).catch(() => {
+							// Ignore refresh errors when tab focuses
+						});
+					});
+
+					// Set active menu item based on current path
+					document.addEventListener('DOMContentLoaded', () => {
+						const currentPath = window.location.pathname;
+						const navItems = document.querySelectorAll('.nav-item[data-path]');
+						
+						// Remove all active classes first
+						document.querySelectorAll('.nav-item').forEach(item => {
+							item.classList.remove('active');
+						});
+
+						// Find and activate matching menu item
+						navItems.forEach(item => {
+							const path = item.getAttribute('data-path');
+							if (path && currentPath.startsWith(path)) {
+								item.classList.add('active');
+							}
+						});
+
+						// Special handling for dashboard home
+						if (currentPath === '/dashboard' || currentPath === '/dashboard/') {
+							const dashboardItem = document.querySelector('.nav-item[href="/dashboard"]');
+							if (dashboardItem) {
+								dashboardItem.classList.add('active');
+							}
+						}
+					});
+				})();
+			}
+		</script>
 	</body>
 </html>
 
@@ -306,6 +512,3 @@ const { title = 'Dashboard', email = '' } = Astro.props;
 	.nav-item:nth-child(4) { animation-delay: 0.4s; }
 	.nav-item:nth-child(5) { animation-delay: 0.5s; }
 </style>
-
-
-

@@ -3,6 +3,11 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { supabase } from '../../../db/supabase';
 import { isAdmin, getAuthenticatedUser, getAuthenticatedSupabase } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
+import { articleSchema, safeValidateAndSanitize } from '../../../lib/validation';
+import { apiRateLimit } from '../../../lib/ratelimit';
+import { createErrorResponse, createSuccessResponse, createValidationErrorResponse, ErrorMessages, handleRouteError } from '../../../lib/error-handler';
+import { sanitizeArticleContent } from '../../../lib/sanitize';
 
 // GET /api/articles - Public (semua bisa akses)
 export const GET: APIRoute = async ({ request, url }) => {
@@ -11,8 +16,37 @@ export const GET: APIRoute = async ({ request, url }) => {
       const page = parseInt(searchParams.get('page') || '1');
       const limit = parseInt(searchParams.get('limit') || '10');
       const categoryId = searchParams.get('category_id');
+      const tagId = searchParams.get('tag_id');
       const status = searchParams.get('status') || 'published'; // Default hanya published untuk public
       const search = searchParams.get('search');
+
+      // If filtering by tag, we need to get article_ids first from article_tags
+      let articleIds: number[] | null = null;
+      if (tagId) {
+         const { data: articleTags } = await supabase
+            .from('article_tags')
+            .select('article_id')
+            .eq('tag_id', parseInt(tagId));
+         
+         articleIds = articleTags?.map((at: any) => at.article_id) || [];
+         
+         // If no articles found with this tag, return empty result
+         if (articleIds.length === 0) {
+            return new Response(
+               JSON.stringify({
+                  data: [],
+                  total: 0,
+                  page,
+                  limit,
+                  totalPages: 0,
+               }),
+               {
+                  status: 200,
+                  headers: { 'Content-Type': 'application/json' },
+               }
+            );
+         }
+      }
 
       let query = supabase
          .from('articles')
@@ -48,22 +82,48 @@ export const GET: APIRoute = async ({ request, url }) => {
          query = query.eq('category_id', categoryId);
       }
 
-      // Search
+      // Filter by tag (using article_ids from article_tags)
+      if (tagId && articleIds && articleIds.length > 0) {
+         query = query.in('id', articleIds);
+      }
+
+      // Search - sanitize input to prevent SQL injection
       if (search) {
-         query = query.or(`title.ilike.%${search}%,summary.ilike.%${search}%,content.ilike.%${search}%`);
+         // Sanitize search string - remove special characters that could be used for SQL injection
+         const sanitizedSearch = search.replace(/[%_\\]/g, '').trim();
+         if (sanitizedSearch.length > 0) {
+            // Escape special characters for LIKE query
+            const escapedSearch = sanitizedSearch.replace(/[%_\\]/g, '\\$&');
+            query = query.or(`title.ilike.%${escapedSearch}%,summary.ilike.%${escapedSearch}%,content.ilike.%${escapedSearch}%`);
+         }
       }
 
       const { data, error, count } = await query;
 
       if (error) {
-         return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-         });
+         return createErrorResponse(error, 500, 'GET /api/articles');
       }
 
-      // Get total count for pagination
-      const { count: totalCount } = await supabase.from('articles').select('*', { count: 'exact', head: true }).eq('status', status);
+      // Get total count for pagination - build count query with same filters
+      let countQuery = supabase.from('articles').select('*', { count: 'exact', head: true }).eq('status', status);
+      
+      if (categoryId) {
+         countQuery = countQuery.eq('category_id', categoryId);
+      }
+      
+      if (tagId && articleIds && articleIds.length > 0) {
+         countQuery = countQuery.in('id', articleIds);
+      }
+      
+      if (search) {
+         const sanitizedSearch = search.replace(/[%_\\]/g, '').trim();
+         if (sanitizedSearch.length > 0) {
+            const escapedSearch = sanitizedSearch.replace(/[%_\\]/g, '\\$&');
+            countQuery = countQuery.or(`title.ilike.%${escapedSearch}%,summary.ilike.%${escapedSearch}%,content.ilike.%${escapedSearch}%`);
+         }
+      }
+      
+      const { count: totalCount } = await countQuery;
 
       return new Response(
          JSON.stringify({
@@ -79,52 +139,74 @@ export const GET: APIRoute = async ({ request, url }) => {
          }
       );
    } catch (error) {
-      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }), {
-         status: 500,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse(error, 500, 'GET /api/articles');
    }
 };
 
 // POST /api/articles - Admin only (RLS enforced)
 export const POST: APIRoute = async (context) => {
+   // Rate limiting - prevent DDoS
+   const rateLimitError = apiRateLimit(context);
+   if (rateLimitError) {
+      return rateLimitError;
+   }
+
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    // Get authenticated Supabase client (will enforce RLS)
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
-      return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
-         status: 401,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse(ErrorMessages.UNAUTHORIZED, 401, 'POST /api/articles');
    }
 
    // Check if user is admin
    const admin = await isAdmin(context);
    if (!admin) {
-      return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
-         status: 403,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse(ErrorMessages.FORBIDDEN, 403, 'POST /api/articles');
    }
 
    const user = await getAuthenticatedUser(context);
    if (!user) {
-      return new Response(JSON.stringify({ error: 'User not found' }), {
-         status: 401,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse(ErrorMessages.UNAUTHORIZED, 401, 'POST /api/articles');
    }
 
    try {
       const body = await context.request.json();
-      const { title, slug, summary, meta_title, meta_description, meta_keywords, content, thumbnail_url, thumbnail_alt, category_id, source_id, status = 'draft', tag_ids = [], url_original, featured = false } = body;
 
-      // Validation
-      if (!title || !slug || !content || !category_id) {
-         return new Response(JSON.stringify({ error: 'Missing required fields' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-         });
+      // Validate and sanitize input using Zod schema
+      const validationResult = safeValidateAndSanitize(articleSchema, body);
+
+      if (!validationResult.success) {
+         return createValidationErrorResponse(
+            validationResult.error.errors,
+            validationResult.error.errors.map((err) => `${err.path.join('.')}: ${err.message}`).join(', ')
+         );
       }
+
+      const {
+         title,
+         slug,
+         summary,
+         meta_title,
+         meta_description,
+         meta_keywords,
+         content,
+         thumbnail_url,
+         thumbnail_alt,
+         category_id,
+         source_id,
+         status = 'draft',
+         tag_ids = [],
+         url_original,
+         featured = false,
+      } = validationResult.data;
+
+      // Sanitize article content to prevent XSS
+      const sanitizedContent = sanitizeArticleContent(content);
 
       // Create article using authenticated client (RLS will enforce policies)
       const { data: article, error: articleError } = await authenticatedClient
@@ -136,7 +218,7 @@ export const POST: APIRoute = async (context) => {
             meta_title: meta_title || null,
             meta_description: meta_description || null,
             meta_keywords: meta_keywords || null,
-            content,
+            content: sanitizedContent, // Use sanitized content
             thumbnail_url,
             thumbnail_alt: thumbnail_alt || null,
             category_id,
@@ -152,10 +234,7 @@ export const POST: APIRoute = async (context) => {
          .single();
 
       if (articleError) {
-         return new Response(JSON.stringify({ error: articleError.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' },
-         });
+         return createErrorResponse(articleError, 500, 'POST /api/articles - insert');
       }
 
       // Add tags if provided (also using authenticated client)
@@ -181,14 +260,8 @@ export const POST: APIRoute = async (context) => {
          }
       }
 
-      return new Response(JSON.stringify({ data: article }), {
-         status: 201,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createSuccessResponse(article, 201);
    } catch (error) {
-      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }), {
-         status: 500,
-         headers: { 'Content-Type': 'application/json' },
-      });
+      return createErrorResponse(error, 500, 'POST /api/articles');
    }
 };

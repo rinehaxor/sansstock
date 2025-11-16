@@ -2,14 +2,21 @@
 import { Image } from 'astro:assets';
 import { supabase } from '../db/supabase';
 
-// Fetch popular articles from last 7 days based on views
+// Fetch popular articles - most viewed articles that are still relevant
+// Since we track total views_count (not per day), we'll prioritize:
+// 1. Articles with highest views_count (popular overall)
+// 2. Still relevant (published within reasonable timeframe, e.g., last 90 days)
+// 3. This approach captures articles that are "trending" - either new with high views or older articles still getting views
 const currentArticleId = Astro.props.currentArticleId || null;
 
-// Calculate date 7 days ago
-const sevenDaysAgo = new Date();
-sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+// Calculate date 90 days ago - articles within this range are considered "relevant"
+// This allows both new popular articles and older articles that are still getting views
+const ninetyDaysAgo = new Date();
+ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+const ninetyDaysAgoISO = ninetyDaysAgo.toISOString();
 
+// Fetch articles with views, ordered by views_count (most popular first)
+// Filter by published date within last 90 days to keep it relevant
 let query = supabase
    .from('articles')
    .select(`
@@ -18,12 +25,19 @@ let query = supabase
       slug,
       thumbnail_url,
       published_at,
-      views_count
+      views_count,
+      categories:category_id (
+         id,
+         name,
+         slug
+      )
    `)
    .eq('status', 'published')
-   .gte('published_at', sevenDaysAgoISO) // Only articles published in last 7 days
-   .order('views_count', { ascending: false, nullsFirst: false }) // Order by views_count descending
-   .limit(5); // Get top 5 most viewed articles
+   .gte('published_at', ninetyDaysAgoISO) // Published within last 90 days (still relevant)
+   .not('views_count', 'is', null)
+   .gt('views_count', 0) // Must have views
+   .order('views_count', { ascending: false }) // Order by views_count descending (most popular first)
+   .limit(5);
 
 if (currentArticleId) {
    query = query.neq('id', currentArticleId);
@@ -31,8 +45,90 @@ if (currentArticleId) {
 
 const { data: articles } = await query;
 
-// Get top 5 articles based on views (already ordered by views_count descending)
-const popularArticles = articles && articles.length > 0 ? articles : [];
+let popularArticles = articles || [];
+
+// If we don't have enough articles from last 90 days, expand to all time
+// This ensures we always have 5 popular articles if available
+if (!popularArticles || popularArticles.length < 5) {
+   const remaining = 5 - (popularArticles?.length || 0);
+   
+   let supplementalQuery = supabase
+      .from('articles')
+      .select(`
+         id,
+         title,
+         slug,
+         thumbnail_url,
+         published_at,
+         views_count,
+         categories:category_id (
+            id,
+            name,
+            slug
+         )
+      `)
+      .eq('status', 'published')
+      .not('views_count', 'is', null)
+      .gt('views_count', 0)
+      .order('views_count', { ascending: false })
+      .limit(remaining);
+   
+   if (currentArticleId) {
+      const excludeIds = [currentArticleId, ...(popularArticles?.map((a: any) => a.id) || [])];
+      if (excludeIds.length > 1) {
+         // Use filter to exclude multiple IDs
+         excludeIds.forEach((id: number) => {
+            supplementalQuery = supplementalQuery.neq('id', id);
+         });
+      } else if (excludeIds.length === 1) {
+         supplementalQuery = supplementalQuery.neq('id', excludeIds[0]);
+      }
+   } else {
+      const excludeIds = popularArticles?.map((a: any) => a.id) || [];
+      excludeIds.forEach((id: number) => {
+         supplementalQuery = supplementalQuery.neq('id', id);
+      });
+   }
+   
+   const { data: supplementalArticles } = await supplementalQuery;
+   
+   if (supplementalArticles && supplementalArticles.length > 0) {
+      // Combine and take top 5
+      const combined = [...(popularArticles || []), ...supplementalArticles];
+      // Sort by views_count and take top 5
+      combined.sort((a: any, b: any) => (b.views_count || 0) - (a.views_count || 0));
+      popularArticles = combined.slice(0, 5);
+   }
+}
+
+// If still no articles, fallback to recently published
+if (!popularArticles || popularArticles.length === 0) {
+   const fallbackQuery = supabase
+      .from('articles')
+      .select(`
+         id,
+         title,
+         slug,
+         thumbnail_url,
+         published_at,
+         views_count,
+         categories:category_id (
+            id,
+            name,
+            slug
+         )
+      `)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(5);
+   
+   if (currentArticleId) {
+      fallbackQuery.neq('id', currentArticleId);
+   }
+   
+   const { data: fallbackArticles } = await fallbackQuery;
+   popularArticles = fallbackArticles || [];
+}
 
 // Helper function untuk get alt text dari media_metadata
 async function getAltText(thumbnailUrl: string | null): Promise<string | null> {
@@ -107,21 +203,11 @@ function getTimeAgo(dateString: string): string {
 							<h4 class="text-sm font-semibold text-gray-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
 								{article.title}
 							</h4>
-							<div class="flex items-center gap-2 mt-1">
-								{article.published_at && (
-									<p class="text-xs text-gray-500">
-										{getTimeAgo(article.published_at)}
-									</p>
-								)}
-								{article.views_count !== undefined && article.views_count !== null && article.views_count > 0 && (
-									<>
-										<span class="text-xs text-gray-400">•</span>
-										<p class="text-xs text-gray-500">
-											{article.views_count} dilihat
-										</p>
-									</>
-								)}
-							</div>
+							{article.categories && (article.categories as any).name && (
+								<p class="text-xs text-blue-600 mt-1 font-medium">
+									{(article.categories as any).name}
+								</p>
+							)}
 						</div>
 					</div>
 				</a>

@@ -1,0 +1,212 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../db/supabase';
+import PopularNews from '../components/PopularNews.astro';
+import NewsPagination from '../components/NewsPagination.tsx';
+
+const searchQuery = Astro.url.searchParams.get('q') || '';
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 10;
+const offset = (page - 1) * limit;
+
+// Site URL
+const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
+const pageTitle = searchQuery ? `Hasil Pencarian: ${searchQuery} - SansStocks` : 'Pencarian Artikel - SansStocks';
+const pageDescription = searchQuery 
+   ? `Hasil pencarian untuk "${searchQuery}" di SansStocks. Temukan artikel terbaru tentang ${searchQuery}.`
+   : 'Cari artikel berita ekonomi, saham, dan analisis pasar di SansStocks.';
+const pageImage = `${siteUrl}/logo.png`;
+
+// Fetch articles based on search query
+let articles: any[] = [];
+let totalArticles = 0;
+let totalPages = 1;
+
+if (searchQuery.trim()) {
+   // Sanitize search string
+   const sanitizedSearch = searchQuery.replace(/[%_\\]/g, '').trim();
+   
+   if (sanitizedSearch.length > 0) {
+      // Escape special characters for LIKE query
+      const escapedSearch = sanitizedSearch.replace(/[%_\\]/g, '\\$&');
+      
+      let query = supabase
+         .from('articles')
+         .select(`
+            id,
+            title,
+            slug,
+            summary,
+            thumbnail_url,
+            published_at,
+            created_at,
+            categories:category_id (
+               id,
+               name,
+               slug
+            )
+         `, { count: 'exact' })
+         .eq('status', 'published')
+         .or(`title.ilike.%${escapedSearch}%,summary.ilike.%${escapedSearch}%,content.ilike.%${escapedSearch}%`)
+         .order('published_at', { ascending: false })
+         .range(offset, offset + limit - 1);
+
+      const { data, error, count } = await query;
+
+      if (!error && data) {
+         articles = data;
+         totalArticles = count || 0;
+         totalPages = Math.ceil(totalArticles / limit);
+      }
+   }
+}
+
+// Helper function untuk get alt text dari media_metadata
+async function getAltText(thumbnailUrl: string | null): Promise<string | null> {
+   if (!thumbnailUrl) return null;
+   
+   try {
+      const { data: mediaMetadata } = await supabase
+         .from('media_metadata')
+         .select('alt_text')
+         .eq('file_url', thumbnailUrl)
+         .single();
+      
+      return mediaMetadata?.alt_text || null;
+   } catch (e) {
+      return null;
+   }
+}
+
+// Get alt text untuk semua artikel
+const articlesWithAltText = await Promise.all(
+   articles.map(async (article: any) => {
+      const altText = await getAltText(article.thumbnail_url);
+      return {
+         ...article,
+         thumbnail_alt: altText,
+      };
+   })
+);
+---
+
+<Layout 
+   title={pageTitle}
+   description={pageDescription}
+   keywords={searchQuery || 'pencarian, artikel, berita ekonomi, saham, analisis pasar'}
+>
+   <Fragment slot="head">
+      {/* Robots Meta */}
+      <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+      
+      {/* Open Graph */}
+      <meta property="og:type" content="website" />
+      <meta property="og:title" content={pageTitle} />
+      <meta property="og:description" content={pageDescription} />
+      <meta property="og:image" content={pageImage} />
+      <meta property="og:url" content={`${siteUrl}/search?q=${encodeURIComponent(searchQuery)}`} />
+      
+      {/* Twitter Card */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={pageTitle} />
+      <meta name="twitter:description" content={pageDescription} />
+      <meta name="twitter:image" content={pageImage} />
+      
+      {/* Canonical URL */}
+      <link rel="canonical" href={`${siteUrl}/search?q=${encodeURIComponent(searchQuery)}`} />
+   </Fragment>
+
+   <div class="min-h-screen bg-gray-50 py-8">
+      <div class="max-w-7xl mx-auto px-4">
+         <!-- Search Header Section -->
+         <section class="mb-12">
+            <div class="bg-white rounded-xl border border-gray-200 p-6 md:p-8">
+               <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                  {searchQuery ? `Hasil Pencarian: "${searchQuery}"` : 'Pencarian Artikel'}
+               </h1>
+               
+               {searchQuery && (
+                  <p class="text-gray-600 mb-6">
+                     Ditemukan <span class="font-semibold text-blue-600">{totalArticles}</span> artikel
+                  </p>
+               )}
+
+               <!-- Search Box -->
+               <form action="/search" method="get" class="max-w-2xl">
+                  <div class="relative">
+                     <svg class="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                     </svg>
+                     <input 
+                        type="text" 
+                        name="q"
+                        value={searchQuery}
+                        placeholder="Cari artikel..." 
+                        class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
+                        autofocus
+                     />
+                  </div>
+               </form>
+            </div>
+         </section>
+
+         {!searchQuery ? (
+            <!-- Empty State - No Search Query -->
+            <section class="mb-16">
+               <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                  <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <circle cx="11" cy="11" r="8"></circle>
+                     <path d="m21 21-4.35-4.35"></path>
+                  </svg>
+                  <h2 class="text-2xl font-bold text-gray-900 mb-2">Cari Artikel</h2>
+                  <p class="text-gray-600 mb-6">Masukkan kata kunci untuk mencari artikel</p>
+               </div>
+            </section>
+         ) : totalArticles === 0 ? (
+            <!-- Empty State - No Results -->
+            <section class="mb-16">
+               <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                  <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <h2 class="text-2xl font-bold text-gray-900 mb-2">Tidak Ada Hasil</h2>
+                  <p class="text-gray-600 mb-6">Tidak ada artikel yang ditemukan untuk "{searchQuery}"</p>
+                  <a 
+                     href="/search" 
+                     class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                     Cari Lagi
+                  </a>
+               </div>
+            </section>
+         ) : (
+            <!-- Articles List Section -->
+            <section class="mb-16">
+               <div class="grid lg:grid-cols-3 gap-8">
+                  <!-- Main News Content -->
+                  <div class="lg:col-span-2">
+                     <!-- News List with Pagination (Client-side) -->
+                     <NewsPagination 
+                        client:load
+                        initialPage={page}
+                        initialArticles={articlesWithAltText}
+                        initialTotalPages={totalPages}
+                        searchQuery={searchQuery}
+                     />
+                  </div>
+                  
+                  <!-- Sidebar -->
+                  <div class="lg:col-span-1">
+                     <!-- Popular News Widget -->
+                     <PopularNews />
+                  </div>
+               </div>
+            </section>
+         )}
+      </div>
+   </div>
+</Layout>
+

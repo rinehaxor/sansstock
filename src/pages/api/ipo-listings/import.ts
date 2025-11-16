@@ -2,6 +2,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { getAuthenticatedSupabase, getAuthenticatedUser, isAdmin } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
 
 // POST /api/ipo-listings/import - Admin only
 // Accepts JSON array of IPO listings with the following structure:
@@ -24,6 +25,12 @@ import { getAuthenticatedSupabase, getAuthenticatedUser, isAdmin } from '../../.
 //   }
 // ]
 export const POST: APIRoute = async (context) => {
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {
       return new Response(JSON.stringify({ error: 'Unauthorized - Please login' }), {
@@ -72,6 +79,13 @@ export const POST: APIRoute = async (context) => {
                ipo_price,
                underwriters,
                performance_metrics = [],
+               assets_growth_1y,
+               liabilities_growth_1y,
+               revenue_growth_1y,
+               net_income_growth_1y,
+               lead_underwriter,
+               accounting_firm,
+               legal_consultant,
             } = ipoData;
 
             // Validation
@@ -139,6 +153,13 @@ export const POST: APIRoute = async (context) => {
                      shares_offered: shares_offered ? BigInt(shares_offered) : null,
                      total_value: total_value || null,
                      ipo_price: ipo_price || null,
+                     assets_growth_1y: assets_growth_1y ?? null,
+                     liabilities_growth_1y: liabilities_growth_1y ?? null,
+                     revenue_growth_1y: revenue_growth_1y ?? null,
+                     net_income_growth_1y: net_income_growth_1y ?? null,
+                     lead_underwriter: lead_underwriter || null,
+                     accounting_firm: accounting_firm || null,
+                     legal_consultant: legal_consultant || null,
                   })
                   .eq('ticker_symbol', ticker_symbol)
                   .select()
@@ -164,6 +185,13 @@ export const POST: APIRoute = async (context) => {
                      shares_offered: shares_offered ? BigInt(shares_offered) : null,
                      total_value: total_value || null,
                      ipo_price: ipo_price || null,
+                     assets_growth_1y: assets_growth_1y ?? null,
+                     liabilities_growth_1y: liabilities_growth_1y ?? null,
+                     revenue_growth_1y: revenue_growth_1y ?? null,
+                     net_income_growth_1y: net_income_growth_1y ?? null,
+                     lead_underwriter: lead_underwriter || null,
+                     accounting_firm: accounting_firm || null,
+                     legal_consultant: legal_consultant || null,
                   })
                   .select()
                   .single();

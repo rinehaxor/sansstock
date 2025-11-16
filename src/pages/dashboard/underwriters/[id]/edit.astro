@@ -1,0 +1,84 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { supabase } from '../../../../db/supabase';
+import UnderwriterForm from '../../../../components/UnderwriterForm';
+
+const accessToken = Astro.cookies.get('sb-access-token');
+const refreshToken = Astro.cookies.get('sb-refresh-token');
+
+if (!accessToken || !refreshToken) {
+  return Astro.redirect('/portal/access');
+}
+
+let session;
+
+try {
+  session = await supabase.auth.setSession({
+    refresh_token: refreshToken.value,
+    access_token: accessToken.value,
+  });
+
+  if (session.error) {
+    Astro.cookies.delete('sb-access-token', { path: '/' });
+    Astro.cookies.delete('sb-refresh-token', { path: '/' });
+    return Astro.redirect('/portal/access');
+  }
+} catch (error) {
+  Astro.cookies.delete('sb-access-token', { path: '/' });
+  Astro.cookies.delete('sb-refresh-token', { path: '/' });
+  return Astro.redirect('/portal/access');
+}
+
+const email = session.data.user?.email;
+
+const underwriterId = Astro.params.id ? parseInt(Astro.params.id, 10) : null;
+if (!underwriterId || Number.isNaN(underwriterId)) {
+  return Astro.redirect('/dashboard/underwriters');
+}
+
+const { data: underwriter, error } = await supabase
+  .from('underwriters')
+  .select('id, name, created_at, updated_at')
+  .eq('id', underwriterId)
+  .maybeSingle();
+
+if (error || !underwriter) {
+  return Astro.redirect('/dashboard/underwriters');
+}
+---
+
+<AdminLayout title="Edit Underwriter" email={email}>
+	<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<div class="flex items-center justify-between mb-8">
+			<div>
+				<h1 class="text-3xl font-bold text-gray-900">Edit Underwriter</h1>
+				<p class="mt-2 text-sm text-gray-600">Perbarui informasi underwriter</p>
+			</div>
+			<a href="/dashboard/underwriters" class="text-sm text-gray-600 hover:text-gray-900">
+				&larr; Kembali ke daftar
+			</a>
+		</div>
+
+		<div class="bg-white shadow-sm rounded-xl border border-gray-200 p-6 space-y-6">
+			<div class="grid grid-cols-2 gap-4 pb-4 border-b border-gray-200">
+				<div>
+					<label class="block text-xs font-medium text-gray-500 mb-1">Dibuat</label>
+					<p class="text-sm text-gray-700">{new Date(underwriter.created_at).toLocaleString('id-ID')}</p>
+				</div>
+				<div>
+					<label class="block text-xs font-medium text-gray-500 mb-1">Terakhir Diupdate</label>
+					<p class="text-sm text-gray-700">{new Date(underwriter.updated_at).toLocaleString('id-ID')}</p>
+				</div>
+			</div>
+		</div>
+		<UnderwriterForm 
+			client:load 
+			mode="edit" 
+			underwriterId={underwriter.id}
+			initialData={{ name: underwriter.name }}
+		/>
+	</div>
+</AdminLayout>
+

@@ -2,9 +2,23 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { getAuthenticatedSupabase, isAdmin } from '../../../lib/auth';
+import { csrfProtection } from '../../../lib/csrf';
+import { uploadRateLimit } from '../../../lib/ratelimit';
 
 // POST /api/upload/thumbnail - Upload thumbnail image to Supabase Storage
 export const POST: APIRoute = async (context) => {
+   // Rate limiting - prevent abuse of upload endpoint
+   const rateLimitError = uploadRateLimit(context);
+   if (rateLimitError) {
+      return rateLimitError;
+   }
+
+   // CSRF Protection
+   const csrfError = csrfProtection(context);
+   if (csrfError) {
+      return csrfError;
+   }
+
    // Get authenticated Supabase client
    const authenticatedClient = await getAuthenticatedSupabase(context);
    if (!authenticatedClient) {

@@ -705,29 +705,37 @@ const tags = allKeywords.join(', ') || '';
   }
 </style>
 
-<script define:vars={{ articleId: article.id }}>
+<script is:inline define:vars={{ articleId: article.id }}>
   // Track article view on page load
-  (async () => {
-    try {
-      const response = await fetch(`/api/articles/${articleId}/view`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  if (typeof window !== 'undefined') {
+    (async () => {
+      try {
+        const response = await fetch(`/api/articles/${articleId}/view`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'same-origin',
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        // Update view count display if element exists
-        const viewsElement = document.getElementById('article-views');
-        if (viewsElement && data.views_count !== undefined) {
-          viewsElement.textContent = data.views_count + ' dilihat';
+        if (response.ok) {
+          const data = await response.json();
+          console.log('View tracked successfully:', data);
+          
+          // Update view count display if element exists
+          const viewsElement = document.getElementById('article-views');
+          if (viewsElement && data.views_count !== undefined) {
+            viewsElement.textContent = data.views_count + ' dilihat';
+          }
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Failed to track view:', response.status, errorData);
         }
+      } catch (error) {
+        // Log error for debugging
+        console.error('Failed to track article view:', error);
       }
-    } catch (error) {
-      // Silently fail - view tracking is not critical
-      console.error('Failed to track article view:', error);
-    }
-  })();
+    })();
+  }
 </script>
 

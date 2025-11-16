@@ -40,13 +40,23 @@ const exampleJson = `[
     "ipo_date": "2021-01-04",
     "general_sector": "Consumer Non-Cyclicals",
     "specific_sector": "Agricultural Products",
-    "shares_offered": 1001718,
-    "total_value": 3629411800,
+    "shares_offered": 3629411800,
+    "total_value": 1001718000000,
     "ipo_price": 1840,
     "underwriters": "PT BCA Sekuritas",
+    "lead_underwriter": "PT BCA Sekuritas",
+    "accounting_firm": "KAP Gani Sigiro & Handayani",
+    "legal_consultant": "Irma & Solomon Law Firm",
+    "assets_growth_1y": 9,
+    "liabilities_growth_1y": 0,
+    "revenue_growth_1y": 42,
+    "net_income_growth_1y": 84,
     "performance_metrics": [
       { "metric_name": "return", "metric_value": 25, "period_days": 1 },
-      { "metric_name": "return", "metric_value": 42, "period_days": 7 }
+      { "metric_name": "return", "metric_value": 42, "period_days": 7 },
+      { "metric_name": "return", "metric_value": 33, "period_days": 30 },
+      { "metric_name": "return", "metric_value": 51, "period_days": 180 },
+      { "metric_name": "return", "metric_value": 74, "period_days": 365 }
     ]
   }
 ]`;
@@ -83,9 +93,19 @@ const exampleJson = `[
 				<pre class="bg-blue-100 p-4 rounded overflow-x-auto mt-2"><code>{exampleJson}</code></pre>
 				<p class="mt-4"><strong>Catatan:</strong></p>
 				<ul class="list-disc list-inside space-y-1 ml-4">
-					<li>Underwriters dapat berupa string (pisahkan dengan semicolon atau comma) atau array</li>
-					<li>Performance metrics adalah array dengan metric_name, metric_value (percentage), dan period_days</li>
+					<li>Underwriters dapat berupa string (pisahkan dengan semicolon atau comma) atau array - akan auto-create jika belum ada</li>
+					<li>Performance metrics: period_days = 1 (1D), 7 (1W), 30 (1M), 180 (6M), 365 (1Y)</li>
+					<li>Financial growth dalam persentase (assets_growth_1y, liabilities_growth_1y, revenue_growth_1y, net_income_growth_1y)</li>
 					<li>Data yang sudah ada akan diupdate berdasarkan ticker_symbol</li>
+					<li>Field opsional bisa diabaikan atau diisi null</li>
+				</ul>
+				<p class="mt-4"><strong>Mapping dari Excel:</strong></p>
+				<ul class="list-disc list-inside space-y-1 ml-4 text-xs">
+					<li>1D = period_days: 1</li>
+					<li>1W = period_days: 7</li>
+					<li>1M = period_days: 30</li>
+					<li>6M = period_days: 180</li>
+					<li>1Y = period_days: 365</li>
 				</ul>
 			</div>
 		</div>
