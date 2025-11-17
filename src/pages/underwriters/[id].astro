@@ -3,6 +3,7 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import { supabase } from '../../db/supabase';
+import IPOTableWithModal from '../../components/IPOTableWithModal.tsx';
 
 const underwriterId = Astro.params.id ? parseInt(Astro.params.id, 10) : null;
 if (!underwriterId || Number.isNaN(underwriterId)) {
@@ -255,8 +256,14 @@ const availablePeriods = Object.keys(performanceByPeriod).map(p => parseInt(p)).
 		<!-- IPO Listings -->
 		<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
 			<h2 class="text-xl font-bold text-gray-900 mb-4">Daftar IPO yang Ditangani</h2>
-			<p class="text-sm text-gray-600 mb-6">
+			<p class="text-sm text-gray-600 mb-2">
 				Berikut adalah daftar lengkap IPO yang pernah ditangani oleh {underwriter.name} di Bursa Efek Indonesia.
+			</p>
+			<p class="text-xs text-blue-600 mb-6 flex items-center gap-1">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+				</svg>
+				Klik pada ticker untuk melihat detail lengkap
 			</p>
 			
 			{ipoListings.length === 0 ? (
@@ -264,93 +271,10 @@ const availablePeriods = Object.keys(performanceByPeriod).map(p => parseInt(p)).
 					<p class="text-gray-500">Belum ada data IPO untuk underwriter ini.</p>
 				</div>
 			) : (
-				<div class="overflow-x-auto">
-					<table class="min-w-full divide-y divide-gray-200">
-						<thead class="bg-gray-50">
-							<tr>
-								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Perusahaan</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal IPO</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sektor</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga IPO</th>
-								<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performa</th>
-							</tr>
-						</thead>
-						<tbody class="bg-white divide-y divide-gray-200">
-							{sortedIpoListings.map((ipo: any) => {
-								const formatCurrency = (num: number | null | undefined): string => {
-									if (num === null || num === undefined) return '-';
-									return new Intl.NumberFormat('id-ID', {
-										style: 'currency',
-										currency: 'IDR',
-										minimumFractionDigits: 0,
-										maximumFractionDigits: 0,
-									}).format(num);
-								};
-
-								const formatPercent = (value: number | null | undefined): string => {
-									if (value === null || value === undefined || Number.isNaN(value)) {
-										return '-';
-									}
-									return `${Number(value).toFixed(2)}%`;
-								};
-
-								const formatDate = (dateString: string): string => {
-									const date = new Date(dateString);
-									return date.toLocaleDateString('id-ID', {
-										year: 'numeric',
-										month: 'long',
-										day: 'numeric',
-									});
-								};
-
-								const metrics = ipo.ipo_performance_metrics || [];
-								const latestMetric = metrics.length > 0 ? metrics[metrics.length - 1] : null;
-
-								return (
-									<tr class="hover:bg-gray-50">
-										<td class="px-4 py-3 whitespace-nowrap">
-											<div class="font-medium text-blue-600">{ipo.ticker_symbol}</div>
-										</td>
-										<td class="px-4 py-3">
-											<div class="text-sm font-medium text-gray-900 max-w-xs">{ipo.company_name}</div>
-										</td>
-										<td class="px-4 py-3 whitespace-nowrap">
-											<div class="text-sm text-gray-900">{formatDate(ipo.ipo_date)}</div>
-										</td>
-										<td class="px-4 py-3">
-											<div class="text-sm text-gray-900">{ipo.general_sector || '-'}</div>
-											{ipo.specific_sector && (
-												<div class="text-xs text-gray-500">{ipo.specific_sector}</div>
-											)}
-										</td>
-										<td class="px-4 py-3 whitespace-nowrap">
-											<div class="text-sm text-gray-900">{formatCurrency(ipo.ipo_price)}</div>
-										</td>
-										<td class="px-4 py-3">
-											{latestMetric ? (
-												<div class="text-sm">
-													<div class={`font-semibold ${latestMetric.metric_value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-														{latestMetric.metric_value >= 0 ? '+' : ''}{latestMetric.metric_value.toFixed(2)}%
-													</div>
-													<div class="text-xs text-gray-500">
-														{latestMetric.period_days === 1 ? 'Hari 1' : 
-														 latestMetric.period_days === 7 ? 'Minggu 1' :
-														 latestMetric.period_days === 30 ? 'Bulan 1' :
-														 latestMetric.period_days === 365 ? 'Tahun 1' :
-														 `${latestMetric.period_days} hari`}
-													</div>
-												</div>
-											) : (
-												<span class="text-sm text-gray-400">-</span>
-											)}
-										</td>
-									</tr>
-								);
-							})}
-						</tbody>
-					</table>
-				</div>
+				<IPOTableWithModal 
+					client:load
+					ipoListings={JSON.stringify(sortedIpoListings)}
+				/>
 			)}
 		</div>
 	</div>

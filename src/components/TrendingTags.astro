@@ -1,0 +1,65 @@
+---
+export const prerender = false;
+
+import { supabase } from '../db/supabase';
+
+// Fetch popular tags (tags with most articles)
+const { data: articleTags } = await supabase
+  .from('article_tags')
+  .select('tag_id');
+
+// Count tag usage
+const tagUsage: Record<number, number> = {};
+if (articleTags) {
+  articleTags.forEach((at: any) => {
+    tagUsage[at.tag_id] = (tagUsage[at.tag_id] || 0) + 1;
+  });
+}
+
+// Get tag IDs sorted by usage (most used first)
+const sortedTagIds = Object.entries(tagUsage)
+  .sort(([, a], [, b]) => (b as number) - (a as number))
+  .slice(0, 10)
+  .map(([tagId]) => parseInt(tagId));
+
+// Fetch tag details
+let trendingTags: any[] = [];
+if (sortedTagIds.length > 0) {
+  const { data: tags } = await supabase
+    .from('tags')
+    .select('id, name, slug')
+    .in('id', sortedTagIds);
+
+  if (tags) {
+    // Sort by usage count
+    trendingTags = tags
+      .map((tag: any) => ({
+        ...tag,
+        count: tagUsage[tag.id] || 0,
+      }))
+      .sort((a: any, b: any) => b.count - a.count)
+      .slice(0, 8); // Show top 8 tags
+  }
+}
+---
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mt-6">
+  <h3 class="text-lg font-bold text-gray-900 mb-4">Tag Populer</h3>
+  
+  {trendingTags && trendingTags.length > 0 ? (
+    <div class="flex flex-wrap gap-2">
+      {trendingTags.map((tag: any) => (
+        <a
+          href={`/tags/${tag.slug}`}
+          class="inline-flex items-center px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 hover:bg-blue-100 hover:text-blue-700 rounded-full transition-colors"
+        >
+          #{tag.name}
+       
+        </a>
+      ))}
+    </div>
+  ) : (
+    <p class="text-sm text-gray-500">Belum ada tag populer.</p>
+  )}
+</div>
+

@@ -1,6 +1,7 @@
-// NewsCard component - renders article cards
+// Wrapper component for NewsCard in React components
+// Uses proper img attributes to minimize Astro warnings about Image component
 
-interface NewsCardProps {
+interface NewsCardWrapperProps {
    id: number;
    title: string;
    slug: string;
@@ -16,23 +17,24 @@ interface NewsCardProps {
    };
 }
 
-function getTimeAgo(dateString: string | null): string {
-   if (!dateString) return 'Baru saja';
-
-   const date = new Date(dateString);
-   const now = new Date();
-   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-   if (diffInSeconds < 60) return 'Baru saja';
-   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit yang lalu`;
-   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam yang lalu`;
-   if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} hari yang lalu`;
-   if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)} minggu yang lalu`;
-   return `${Math.floor(diffInSeconds / 2592000)} bulan yang lalu`;
-}
-
-export default function NewsCard({ title, slug, summary, thumbnail_url, thumbnail_alt, published_at, created_at, categories }: NewsCardProps) {
+// This component will be replaced with server-side rendered NewsCard.astro
+// For now, we'll render it with proper img attributes to minimize warnings
+export default function NewsCardWrapper({ title, slug, summary, thumbnail_url, thumbnail_alt, published_at, created_at, categories }: NewsCardWrapperProps) {
    const category = categories?.name || 'Umum';
+
+   function getTimeAgo(dateString: string | null): string {
+      if (!dateString) return 'Baru saja';
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+      if (diffInSeconds < 60) return 'Baru saja';
+      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit yang lalu`;
+      if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam yang lalu`;
+      if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} hari yang lalu`;
+      if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 604800)} minggu yang lalu`;
+      return `${Math.floor(diffInSeconds / 2592000)} bulan yang lalu`;
+   }
+
    const timeAgo = getTimeAgo(published_at || created_at);
    const articleUrl = `/artikel/${slug}`;
 
@@ -41,7 +43,19 @@ export default function NewsCard({ title, slug, summary, thumbnail_url, thumbnai
          <div className="flex gap-6">
             <a href={articleUrl} className="flex-shrink-0">
                {thumbnail_url ? (
-                  <img src={thumbnail_url} alt={thumbnail_alt || title || 'Article thumbnail'} className="w-48 h-28 rounded-lg object-cover" loading="lazy" width="192" height="112" decoding="async" fetchPriority="low" />
+                  <img
+                     src={thumbnail_url}
+                     alt={thumbnail_alt || title || 'Article thumbnail'}
+                     className="w-48 h-28 rounded-lg object-cover"
+                     loading="lazy"
+                     width={192}
+                     height={112}
+                     decoding="async"
+                     fetchPriority="low"
+                     sizes="(max-width: 640px) 100vw, 192px"
+                     style={{ aspectRatio: '192/112' }}
+                     data-astro-preload="disabled"
+                  />
                ) : (
                   <div className="w-48 h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
                      <svg className="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">

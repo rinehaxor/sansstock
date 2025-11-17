@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from './ui/pagination';
-import NewsCard from './NewsCard';
+import NewsCard from './NewsCardWrapper';
 
 // CSS animations for smooth transitions
 const animationStyles = `
@@ -127,7 +127,7 @@ export default function NewsPagination({ initialPage = 1, initialArticles = [], 
          items.push(
             <PaginationItem key="1">
                <PaginationLink
-                  href="#"
+                  href={`?page=1`}
                   onClick={(e) => {
                      e.preventDefault();
                      handlePageChange(1);
@@ -151,7 +151,7 @@ export default function NewsPagination({ initialPage = 1, initialArticles = [], 
          items.push(
             <PaginationItem key={i}>
                <PaginationLink
-                  href="#"
+                  href={`?page=${i}`}
                   onClick={(e) => {
                      e.preventDefault();
                      handlePageChange(i);
@@ -175,7 +175,7 @@ export default function NewsPagination({ initialPage = 1, initialArticles = [], 
          items.push(
             <PaginationItem key={totalPages}>
                <PaginationLink
-                  href="#"
+                  href={`?page=${totalPages}`}
                   onClick={(e) => {
                      e.preventDefault();
                      handlePageChange(totalPages);
@@ -272,8 +272,12 @@ export default function NewsPagination({ initialPage = 1, initialArticles = [], 
                <PaginationContent>
                   <PaginationItem>
                      <PaginationPrevious
-                        href="#"
+                        href={currentPage > 1 ? `?page=${currentPage - 1}` : undefined}
                         onClick={(e) => {
+                           if (currentPage <= 1 || loading) {
+                              e.preventDefault();
+                              return;
+                           }
                            e.preventDefault();
                            handlePageChange(currentPage - 1);
                         }}
@@ -283,8 +287,12 @@ export default function NewsPagination({ initialPage = 1, initialArticles = [], 
                   {generatePaginationItems()}
                   <PaginationItem>
                      <PaginationNext
-                        href="#"
+                        href={currentPage < totalPages ? `?page=${currentPage + 1}` : undefined}
                         onClick={(e) => {
+                           if (currentPage >= totalPages || loading) {
+                              e.preventDefault();
+                              return;
+                           }
                            e.preventDefault();
                            handlePageChange(currentPage + 1);
                         }}

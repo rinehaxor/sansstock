@@ -80,15 +80,15 @@ export const POST: APIRoute = async ({ params }) => {
 			}
 		} catch (rpcError) {
 			// RPC doesn't exist or failed, use direct update
-			const currentViews = articleData.views_count || 0;
-			const newViewsCount = currentViews + 1;
-			
+		const currentViews = articleData.views_count || 0;
+		const newViewsCount = currentViews + 1;
+
 			const { data, error } = await clientToUse
-				.from('articles')
-				.update({ views_count: newViewsCount })
-				.eq('id', articleId)
-				.select('views_count')
-				.single();
+			.from('articles')
+			.update({ views_count: newViewsCount })
+			.eq('id', articleId)
+			.select('views_count')
+			.single();
 			
 			updateData = data;
 			updateError = error;

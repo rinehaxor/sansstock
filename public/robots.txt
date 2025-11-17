@@ -1,4 +1,4 @@
-# robots.txt for SansStocks
+# robots.txt for EmitenHub
 # https://www.robotstxt.org/robotstxt.html
 
 User-agent: *
@@ -9,7 +9,7 @@ Disallow: /api/
 
 # Sitemap location
 # Update this URL to match your actual domain
-Sitemap: https://sansstocks.com/sitemap.xml
+Sitemap: https://emitenhub.com/sitemap.xml
 
 # Crawl-delay (optional, uncomment if needed)
 # Crawl-delay: 1

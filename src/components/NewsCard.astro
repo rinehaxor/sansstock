@@ -79,7 +79,21 @@ const articleUrl = `/artikel/${slug}`;
       <h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">{title}</h3>
       <p class="text-sm text-gray-600 mb-3 line-clamp-2">{summary || 'Tidak ada ringkasan tersedia...'}</p>
       <p class="text-sm text-blue-600 font-medium">
-        {category} | {timeAgo}
+        {categories?.slug ? (
+          <>
+            <a 
+              href={`/categories/${categories.slug}`}
+              onclick="event.stopPropagation();"
+              class="hover:underline"
+            >
+              {category}
+            </a>
+            {' | '}
+            {timeAgo}
+          </>
+        ) : (
+          `${category} | ${timeAgo}`
+        )}
       </p>
     </div>
   </a>

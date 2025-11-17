@@ -11,8 +11,8 @@ interface Props {
 }
 
 const { 
-	title = 'SansStocks - Berita Ekonomi & Analisis Pasar',
-	description = 'SansStocks - Portal berita ekonomi, saham, dan analisis pasar terpercaya',
+	title = 'EmitenHub - Berita Ekonomi & Analisis Pasar',
+	description = 'EmitenHub.com - Portal berita ekonomi, saham, dan analisis pasar terpercaya',
 	keywords = 'berita ekonomi, saham, pasar modal, analisis finansial, investasi'
 } = Astro.props;
 ---
@@ -22,18 +22,26 @@ const {
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="apple-touch-icon" href="/logo.png" />
+		<link rel="icon" type="image/svg+xml" href="/logofavico.svg" />
 		<meta name="generator" content={Astro.generator} />
 		<meta name="description" content={description} />
 		<meta name="keywords" content={keywords} />
-		<meta name="author" content="SansStocks" />
-		<meta name="publisher" content="SansStocks" />
+		<meta name="author" content="EmitenHub" />
+		<meta name="publisher" content="EmitenHub" />
 		<meta name="theme-color" content="#2563eb" />
 		<title>{title}</title>
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+		
+		<!-- Preconnect to external domains for better performance -->
+		<link rel="preconnect" href="https://supabase.co" crossorigin />
+		<link rel="dns-prefetch" href="https://supabase.co" />
+		<link rel="dns-prefetch" href="https://pintu.co.id" />
+		
+		<!-- RSS Feed -->
+		<link rel="alternate" type="application/rss+xml" title="EmitenHub RSS Feed" href="/rss.xml" />
+		
 		<link rel="manifest" href="/site.webmanifest" />
 		<slot name="head" />
 	</head>

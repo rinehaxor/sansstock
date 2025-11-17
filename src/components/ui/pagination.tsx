@@ -18,22 +18,24 @@ type PaginationLinkProps = {
    size?: 'default' | 'sm' | 'lg' | 'icon';
 } & React.ComponentProps<'a'>;
 
-const PaginationLink = React.forwardRef<HTMLAnchorElement, PaginationLinkProps>(({ className, isActive, size = 'icon', href, ...props }, ref) => {
-   const linkProps = href !== undefined ? { href, ...props } : { ...props, tabIndex: -1, 'aria-disabled': true };
-   return (
-      <a
-         ref={ref}
-         aria-current={isActive ? 'page' : undefined}
-         className={cn(
-            buttonVariants({
-               variant: isActive ? 'outline' : 'ghost',
-               size,
-            }),
-            className
-         )}
-         {...linkProps}
-      />
+const PaginationLink = React.forwardRef<HTMLAnchorElement | HTMLButtonElement, PaginationLinkProps>(({ className, isActive, size = 'icon', href, ...props }, ref) => {
+   const baseClassName = cn(
+      buttonVariants({
+         variant: isActive ? 'outline' : 'ghost',
+         size,
+      }),
+      className
    );
+
+   // If href is undefined, render as button for accessibility
+   if (href === undefined) {
+      return (
+         <button ref={ref as React.ForwardedRef<HTMLButtonElement>} aria-current={isActive ? 'page' : undefined} aria-disabled={true} disabled={true} tabIndex={-1} className={baseClassName} {...(props as React.ComponentProps<'button'>)} />
+      );
+   }
+
+   // Otherwise render as anchor link
+   return <a ref={ref as React.ForwardedRef<HTMLAnchorElement>} href={href} aria-current={isActive ? 'page' : undefined} className={baseClassName} {...props} />;
 });
 PaginationLink.displayName = 'PaginationLink';
 

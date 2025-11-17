@@ -1,12 +1,39 @@
 ---
+export const prerender = false;
+
 import Layout from '../layouts/Layout.astro';
+import MarketTicker from '../components/MarketTicker.astro';
 import FeaturedNews from '../components/FeaturedNews.astro';
 import MarketOverview from '../components/MarketOverview.astro';
 import NewsList from '../components/NewsList.astro';
+import CategoryTabs from '../components/CategoryTabs.tsx';
+import { supabase } from '../db/supabase';
+
+// Fetch categories for tabs
+const { data: categories } = await supabase
+  .from('categories')
+  .select('id, name, slug, description')
+  .order('name', { ascending: true });
+
+// Filter categories that have published articles
+const categoriesWithArticles = await Promise.all(
+  (categories || []).map(async (category: any) => {
+    const { data: articles } = await supabase
+      .from('articles')
+      .select('id')
+      .eq('status', 'published')
+      .eq('category_id', category.id)
+      .limit(1);
+    
+    return articles && articles.length > 0 ? category : null;
+  })
+);
+
+const availableCategories = categoriesWithArticles.filter((cat) => cat !== null);
 
 // Site URL akan otomatis detect dari environment variable atau request
 const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
-const pageTitle = 'SansStocks - Berita Ekonomi & Analisis Pasar Terpercaya';
+const pageTitle = 'EmitenHub - Berita Ekonomi & Analisis Pasar Terpercaya';
 const pageDescription = 'Portal berita ekonomi, saham, dan analisis pasar terpercaya. Dapatkan insight terbaru tentang pasar modal Indonesia, analisis saham, dan berita ekonomi terkini.';
 const pageImage = `${siteUrl}/logo.png`;
 ---
@@ -49,7 +76,7 @@ const pageImage = `${siteUrl}/logo.png`;
 		<script type="application/ld+json" set:html={JSON.stringify({
 			"@context": "https://schema.org",
 			"@type": "Organization",
-			"name": "SansStocks",
+			"name": "EmitenHub",
 			"url": siteUrl,
 			"logo": {
 				"@type": "ImageObject",
@@ -57,23 +84,19 @@ const pageImage = `${siteUrl}/logo.png`;
 				"width": 200,
 				"height": 200
 			},
-			"sameAs": [
-				// Tambahkan social media links jika ada
-				// "https://twitter.com/sansstocks",
-				// "https://facebook.com/sansstocks"
-			]
+			"sameAs": []
 		})} />
 		
 		{/* Structured Data (JSON-LD) - WebSite */}
 		<script type="application/ld+json" set:html={JSON.stringify({
 			"@context": "https://schema.org",
 			"@type": "WebSite",
-			"name": "SansStocks",
+			"name": "EmitenHub",
 			"url": siteUrl,
 			"description": pageDescription,
 			"publisher": {
 				"@type": "Organization",
-				"name": "SansStocks"
+				"name": "EmitenHub"
 			},
 			"potentialAction": {
 				"@type": "SearchAction",
@@ -82,6 +105,24 @@ const pageImage = `${siteUrl}/logo.png`;
 					"urlTemplate": `${siteUrl}/artikel?search={search_term_string}`
 				},
 				"query-input": "required name=search_term_string"
+			},
+			"mainEntity": {
+				"@type": "SiteNavigationElement",
+				"name": "Main Navigation",
+				"url": siteUrl,
+				"hasPart": [
+					{
+						"@type": "SiteNavigationElement",
+						"name": "Artikel",
+						"url": `${siteUrl}/artikel`
+					},
+					...availableCategories.slice(0, 5).map((category: any) => ({
+						"@type": "SiteNavigationElement",
+						"name": category.name,
+						"url": `${siteUrl}/categories/${category.slug}`,
+						"description": category.description || `Semua artikel tentang ${category.name}`
+					}))
+				]
 			}
 		})} />
 		
@@ -99,8 +140,13 @@ const pageImage = `${siteUrl}/logo.png`;
 	</Fragment>
 
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+	<MarketTicker />
 	<FeaturedNews />
 	<MarketOverview />
+	<CategoryTabs 
+		client:load 
+		categories={JSON.stringify(availableCategories)} 
+	/>
 	<NewsList />
 	</div>
 </Layout>

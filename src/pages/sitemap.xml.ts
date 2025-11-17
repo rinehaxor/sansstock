@@ -8,6 +8,12 @@ export const GET: APIRoute = async ({ site, url }) => {
    const siteUrl = site?.href || `${url.protocol}//${url.host}`;
    const currentDate = new Date().toISOString();
 
+   // Function to escape XML special characters in URLs
+   const escapeXml = (unsafe: string): string => {
+      if (!unsafe) return '';
+      return unsafe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+   };
+
    try {
       // Fetch all published articles
       const { data: articles, error: articlesError } = await supabase.from('articles').select('slug, updated_at, published_at').eq('status', 'published').order('published_at', { ascending: false });
@@ -35,7 +41,7 @@ export const GET: APIRoute = async ({ site, url }) => {
 
       // Homepage
       urls.push(`  <url>
-    <loc>${siteUrl}</loc>
+    <loc>${escapeXml(siteUrl)}</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -43,7 +49,7 @@ export const GET: APIRoute = async ({ site, url }) => {
 
       // Articles index
       urls.push(`  <url>
-    <loc>${siteUrl}/artikel</loc>
+    <loc>${escapeXml(siteUrl)}/artikel</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
@@ -51,10 +57,34 @@ export const GET: APIRoute = async ({ site, url }) => {
 
       // FAQ page
       urls.push(`  <url>
-    <loc>${siteUrl}/faq</loc>
+    <loc>${escapeXml(siteUrl)}/faq</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>`);
+
+      // About page
+      urls.push(`  <url>
+    <loc>${escapeXml(siteUrl)}/tentang-kami</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>`);
+
+      // Disclaimer page
+      urls.push(`  <url>
+    <loc>${escapeXml(siteUrl)}/disclaimer</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>`);
+
+      // Privacy Policy page
+      urls.push(`  <url>
+    <loc>${escapeXml(siteUrl)}/kebijakan-privasi</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>`);
 
       // Published articles
@@ -62,7 +92,7 @@ export const GET: APIRoute = async ({ site, url }) => {
          articles.forEach((article: any) => {
             const lastmod = article.updated_at || article.published_at || currentDate;
             urls.push(`  <url>
-    <loc>${siteUrl}/artikel/${article.slug}</loc>
+    <loc>${escapeXml(siteUrl)}/artikel/${escapeXml(article.slug)}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -75,7 +105,7 @@ export const GET: APIRoute = async ({ site, url }) => {
          categories.forEach((category: any) => {
             const lastmod = category.updated_at || currentDate;
             urls.push(`  <url>
-    <loc>${siteUrl}/categories/${category.slug}</loc>
+    <loc>${escapeXml(siteUrl)}/categories/${escapeXml(category.slug)}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -88,7 +118,7 @@ export const GET: APIRoute = async ({ site, url }) => {
          tags.forEach((tag: any) => {
             const lastmod = tag.updated_at || currentDate;
             urls.push(`  <url>
-    <loc>${siteUrl}/tags/${tag.slug}</loc>
+    <loc>${escapeXml(siteUrl)}/tags/${escapeXml(tag.slug)}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

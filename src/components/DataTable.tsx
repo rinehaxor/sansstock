@@ -551,27 +551,41 @@ export function DataTable<T extends Record<string, any>>({
          {totalPages && totalPages > 1 && currentPage && (
             <div className="mt-6">
                <nav className="flex items-center justify-center gap-2" aria-label="Pagination">
-                  <a
-                     href={currentPage > 1 ? (buildPaginationUrl ? buildPaginationUrl(currentPage - 1, searchValue) : getPageUrl(currentPage - 1)) : '#'}
-                     className={cn(
-                        'inline-flex items-center justify-center px-4 py-2 text-sm font-medium border rounded-lg transition-colors',
-                        currentPage <= 1 ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed pointer-events-none' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                     )}
-                     aria-disabled={currentPage <= 1}
-                  >
-                     Previous
-                  </a>
+                  {currentPage > 1 ? (
+                     <a
+                        href={buildPaginationUrl ? buildPaginationUrl(currentPage - 1, searchValue) : getPageUrl(currentPage - 1)}
+                        className={cn('inline-flex items-center justify-center px-4 py-2 text-sm font-medium border rounded-lg transition-colors', 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50')}
+                     >
+                        Previous
+                     </a>
+                  ) : (
+                     <button
+                        disabled
+                        aria-disabled={true}
+                        tabIndex={-1}
+                        className={cn('inline-flex items-center justify-center px-4 py-2 text-sm font-medium border rounded-lg transition-colors', 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed pointer-events-none')}
+                     >
+                        Previous
+                     </button>
+                  )}
                   {generatePaginationItems()}
-                  <a
-                     href={currentPage < totalPages ? (buildPaginationUrl ? buildPaginationUrl(currentPage + 1, searchValue) : getPageUrl(currentPage + 1)) : '#'}
-                     className={cn(
-                        'inline-flex items-center justify-center px-4 py-2 text-sm font-medium border rounded-lg transition-colors',
-                        currentPage >= totalPages ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed pointer-events-none' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                     )}
-                     aria-disabled={currentPage >= totalPages}
-                  >
-                     Next
-                  </a>
+                  {currentPage < totalPages ? (
+                     <a
+                        href={buildPaginationUrl ? buildPaginationUrl(currentPage + 1, searchValue) : getPageUrl(currentPage + 1)}
+                        className={cn('inline-flex items-center justify-center px-4 py-2 text-sm font-medium border rounded-lg transition-colors', 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50')}
+                     >
+                        Next
+                     </a>
+                  ) : (
+                     <button
+                        disabled
+                        aria-disabled={true}
+                        tabIndex={-1}
+                        className={cn('inline-flex items-center justify-center px-4 py-2 text-sm font-medium border rounded-lg transition-colors', 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed pointer-events-none')}
+                     >
+                        Next
+                     </button>
+                  )}
                </nav>
                {totalItems && itemsPerPage && (
                   <div className="mt-4 text-sm text-gray-600 text-center">

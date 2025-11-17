@@ -216,14 +216,7 @@ function getTimeAgo(dateString: string): string {
                     {article.categories.name}
                   </span>
                 )}
-                {article.published_at && (
-                  <>
-                    <span class="text-gray-400">|</span>
-                    <span class="text-gray-500">
-                      {getTimeAgo(article.published_at)}
-                    </span>
-                  </>
-                )}
+               
               </div>
             </div>
           </div>

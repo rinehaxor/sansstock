@@ -311,11 +311,11 @@ const tags = allKeywords.join(', ') || '';
     {article.published_at && <meta name="article:published_time" content={article.published_at} />}
     {article.updated_at && <meta name="article:modified_time" content={article.updated_at} />}
     
-    {/* Structured Data (JSON-LD) - Article */}
+    {/* Structured Data (JSON-LD) - NewsArticle (more specific for news sites) */}
     <script type="application/ld+json" set:html={JSON.stringify((() => {
       const articleSchema: any = {
         "@context": "https://schema.org",
-        "@type": "Article",
+        "@type": "NewsArticle",
         "headline": article.title,
         "description": metaDescription,
         "image": {
@@ -328,12 +328,12 @@ const tags = allKeywords.join(', ') || '';
         "dateModified": article.updated_at || article.created_at,
         "author": {
           "@type": "Organization",
-          "name": "SansStocks",
+          "name": "EmitenHub",
           "url": siteUrl
         },
         "publisher": {
           "@type": "Organization",
-          "name": "SansStocks",
+          "name": "EmitenHub",
           "logo": {
             "@type": "ImageObject",
             "url": `${siteUrl}/logo.png`,
@@ -365,6 +365,14 @@ const tags = allKeywords.join(', ') || '';
       
       if (allKeywords.length > 0) {
         articleSchema.keywords = allKeywords.join(', ');
+      }
+      
+      // Add articleBody for rich snippets (strip HTML tags for plain text)
+      if (article.content) {
+        const textContent = article.content.replace(/<[^>]*>/g, '').trim();
+        if (textContent.length > 0) {
+          articleSchema.articleBody = textContent.substring(0, 5000); // Limit to 5000 chars
+        }
       }
       
       return articleSchema;
@@ -708,34 +716,34 @@ const tags = allKeywords.join(', ') || '';
 <script is:inline define:vars={{ articleId: article.id }}>
   // Track article view on page load
   if (typeof window !== 'undefined') {
-    (async () => {
-      try {
-        const response = await fetch(`/api/articles/${articleId}/view`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+  (async () => {
+    try {
+      const response = await fetch(`/api/articles/${articleId}/view`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
           credentials: 'same-origin',
-        });
+      });
 
-        if (response.ok) {
-          const data = await response.json();
+      if (response.ok) {
+        const data = await response.json();
           console.log('View tracked successfully:', data);
           
-          // Update view count display if element exists
-          const viewsElement = document.getElementById('article-views');
-          if (viewsElement && data.views_count !== undefined) {
-            viewsElement.textContent = data.views_count + ' dilihat';
-          }
+        // Update view count display if element exists
+        const viewsElement = document.getElementById('article-views');
+        if (viewsElement && data.views_count !== undefined) {
+          viewsElement.textContent = data.views_count + ' dilihat';
+        }
         } else {
           const errorData = await response.json().catch(() => ({}));
           console.error('Failed to track view:', response.status, errorData);
-        }
-      } catch (error) {
-        // Log error for debugging
-        console.error('Failed to track article view:', error);
       }
-    })();
+    } catch (error) {
+        // Log error for debugging
+      console.error('Failed to track article view:', error);
+    }
+  })();
   }
 </script>
 

@@ -1,0 +1,267 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+
+const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
+const pageTitle = 'Kebijakan Privasi - EmitenHub';
+const pageDescription = 'Kebijakan privasi EmitenHub.com. Pelajari bagaimana kami mengumpulkan, menggunakan, dan melindungi informasi pribadi Anda saat menggunakan platform kami.';
+---
+
+<Layout 
+  title={pageTitle}
+  description={pageDescription}
+  keywords="kebijakan privasi, privacy policy, perlindungan data, EmitenHub"
+>
+  <Fragment slot="head">
+    {/* Robots Meta */}
+    <meta name="robots" content="index, follow" />
+    
+    {/* Open Graph */}
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:url" content={`${siteUrl}/kebijakan-privasi`} />
+    <meta property="og:site_name" content="EmitenHub" />
+    <meta property="og:locale" content="id_ID" />
+    
+    {/* Twitter Card */}
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta property="twitter:description" content={pageDescription} />
+    
+    {/* Canonical URL */}
+    <link rel="canonical" href={`${siteUrl}/kebijakan-privasi`} />
+    
+    {/* Structured Data (JSON-LD) - WebPage */}
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "name": "Kebijakan Privasi",
+      "description": pageDescription,
+      "url": `${siteUrl}/kebijakan-privasi`,
+      "breadcrumb": {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Beranda",
+            "item": siteUrl
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Kebijakan Privasi",
+            "item": `${siteUrl}/kebijakan-privasi`
+          }
+        ]
+      }
+    })} />
+  </Fragment>
+
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    {/* Breadcrumb */}
+    <nav class="mb-8 text-sm text-gray-600">
+      <a href="/" class="hover:text-gray-900">Beranda</a>
+      <span class="mx-2">/</span>
+      <span class="text-gray-900">Kebijakan Privasi</span>
+    </nav>
+
+    {/* Header */}
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-gray-900 mb-4">Kebijakan Privasi</h1>
+      <p class="text-lg text-gray-600">Kami menghormati privasi Anda dan berkomitmen untuk melindungi informasi pribadi Anda</p>
+      <p class="text-sm text-gray-500 mt-2">
+        <strong>Terakhir diperbarui:</strong> {new Date().toLocaleDateString('id-ID', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })}
+      </p>
+    </div>
+
+    {/* Content */}
+    <div class="prose prose-lg max-w-none">
+      <section class="mb-8">
+        <p class="text-gray-700 leading-relaxed">
+          EmitenHub.com ("kami", "kita", atau "platform") menghormati privasi pengunjung dan pengguna kami. 
+          Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, menyimpan, dan melindungi 
+          informasi pribadi Anda saat menggunakan platform EmitenHub.com.
+        </p>
+        <p class="text-gray-700 leading-relaxed">
+          Dengan menggunakan platform ini, Anda menyetujui pengumpulan dan penggunaan informasi sesuai dengan 
+          kebijakan yang dijelaskan di bawah ini.
+        </p>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">1. Informasi yang Kami Kumpulkan</h2>
+        
+        <h3 class="text-xl font-semibold text-gray-900 mb-3 mt-6">1.1 Informasi yang Anda Berikan</h3>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li><strong>Informasi Akun:</strong> Jika Anda membuat akun (untuk admin/editor), kami mengumpulkan nama, email, dan informasi lain yang Anda berikan saat registrasi.</li>
+          <li><strong>Kontak:</strong> Jika Anda menghubungi kami melalui email atau formulir kontak, kami menyimpan informasi yang Anda berikan.</li>
+        </ul>
+
+        <h3 class="text-xl font-semibold text-gray-900 mb-3 mt-6">1.2 Informasi yang Dikumpulkan Otomatis</h3>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li><strong>Data Teknis:</strong> Alamat IP, jenis browser, sistem operasi, halaman yang dikunjungi, waktu kunjungan, dan referrer URL.</li>
+          <li><strong>Cookies:</strong> Kami menggunakan cookies untuk meningkatkan pengalaman pengguna, menganalisis traffic, dan mengingat preferensi Anda.</li>
+          <li><strong>Log Files:</strong> Server kami secara otomatis mencatat informasi akses termasuk alamat IP, waktu akses, dan halaman yang diminta.</li>
+        </ul>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">2. Bagaimana Kami Menggunakan Informasi</h2>
+        <p class="text-gray-700 mb-4">Kami menggunakan informasi yang dikumpulkan untuk:</p>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li>Menyediakan, memelihara, dan meningkatkan layanan platform</li>
+          <li>Menganalisis penggunaan website untuk meningkatkan konten dan fitur</li>
+          <li>Mengirimkan notifikasi penting terkait layanan (jika Anda berlangganan)</li>
+          <li>Mencegah aktivitas yang melanggar ketentuan penggunaan</li>
+          <li>Memenuhi kewajiban hukum dan regulasi</li>
+          <li>Mengelola akun admin/editor dan autentikasi</li>
+        </ul>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">3. Cookies dan Teknologi Pelacakan</h2>
+        <p class="text-gray-700 mb-4">
+          Kami menggunakan cookies dan teknologi serupa untuk:
+        </p>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li><strong>Cookies Esensial:</strong> Diperlukan untuk fungsi dasar website seperti autentikasi dan keamanan</li>
+          <li><strong>Cookies Analitik:</strong> Membantu kami memahami bagaimana pengunjung menggunakan website</li>
+          <li><strong>Cookies Preferensi:</strong> Mengingat pengaturan dan preferensi Anda</li>
+        </ul>
+        <p class="text-gray-700 mt-4">
+          Anda dapat mengatur browser untuk menolak cookies, namun hal ini dapat mempengaruhi fungsionalitas website.
+        </p>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">4. Berbagi Informasi</h2>
+        <p class="text-gray-700 mb-4">
+          Kami <strong>tidak menjual, menyewakan, atau memperdagangkan</strong> informasi pribadi Anda kepada pihak ketiga. 
+          Kami dapat membagikan informasi dalam situasi berikut:
+        </p>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li><strong>Penyedia Layanan:</strong> Dengan vendor yang membantu kami mengoperasikan platform (hosting, analytics) dengan kewajiban menjaga kerahasiaan</li>
+          <li><strong>Kewajiban Hukum:</strong> Jika diwajibkan oleh hukum atau untuk melindungi hak dan keamanan kami</li>
+          <li><strong>Persetujuan:</strong> Dengan persetujuan eksplisit Anda</li>
+        </ul>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">5. Keamanan Data</h2>
+        <p class="text-gray-700 mb-4">
+          Kami menerapkan langkah-langkah keamanan teknis dan organisasi yang wajar untuk melindungi informasi pribadi Anda, termasuk:
+        </p>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li>Enkripsi data dalam transmisi (HTTPS/SSL)</li>
+          <li>Pembatasan akses data hanya untuk personel yang berwenang</li>
+          <li>Pemantauan keamanan sistem secara berkala</li>
+          <li>Backup data secara rutin</li>
+        </ul>
+        <p class="text-gray-700 mt-4">
+          Namun, tidak ada metode transmisi atau penyimpanan data yang 100% aman. Meskipun kami berusaha melindungi 
+          informasi Anda, kami tidak dapat menjamin keamanan absolut.
+        </p>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">6. Penyimpanan Data</h2>
+        <p class="text-gray-700 mb-4">
+          Kami menyimpan informasi pribadi selama diperlukan untuk tujuan yang dijelaskan dalam kebijakan ini, 
+          atau sesuai dengan kewajiban hukum. Data akan dihapus ketika:
+        </p>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li>Tidak lagi diperlukan untuk tujuan pengumpulan</li>
+          <li>Anda meminta penghapusan (sesuai dengan hak Anda)</li>
+          <li>Diwajibkan oleh hukum</li>
+        </ul>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">7. Hak Anda</h2>
+        <p class="text-gray-700 mb-4">Anda memiliki hak untuk:</p>
+        <ul class="list-disc list-inside text-gray-700 space-y-2">
+          <li><strong>Akses:</strong> Meminta salinan informasi pribadi yang kami simpan tentang Anda</li>
+          <li><strong>Perbaikan:</strong> Meminta koreksi informasi yang tidak akurat atau tidak lengkap</li>
+          <li><strong>Penghapusan:</strong> Meminta penghapusan informasi pribadi Anda (hak untuk dilupakan)</li>
+          <li><strong>Pembatasan:</strong> Meminta pembatasan pemrosesan informasi Anda</li>
+          <li><strong>Portabilitas:</strong> Meminta transfer data Anda ke platform lain</li>
+          <li><strong>Keberatan:</strong> Menolak pemrosesan informasi Anda untuk tujuan tertentu</li>
+        </ul>
+        <p class="text-gray-700 mt-4">
+          Untuk menggunakan hak-hak ini, silakan hubungi kami melalui halaman 
+          <a href="/tentang-kami" class="text-blue-600 hover:text-blue-700 underline">Tentang Kami</a>.
+        </p>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">8. Privasi Anak-Anak</h2>
+        <p class="text-gray-700">
+          Platform kami tidak ditujukan untuk anak-anak di bawah 18 tahun. Kami tidak secara sengaja mengumpulkan 
+          informasi pribadi dari anak-anak. Jika kami mengetahui bahwa kami telah mengumpulkan informasi dari anak-anak 
+          tanpa persetujuan orang tua, kami akan mengambil langkah untuk menghapus informasi tersebut.
+        </p>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">9. Link ke Website Pihak Ketiga</h2>
+        <p class="text-gray-700 mb-4">
+          Platform kami mungkin berisi link ke website pihak ketiga. Kami tidak bertanggung jawab atas praktik privasi 
+          atau konten website tersebut. Kami menyarankan Anda untuk membaca kebijakan privasi setiap website yang Anda kunjungi.
+        </p>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">10. Perubahan Kebijakan Privasi</h2>
+        <p class="text-gray-700">
+          Kami dapat memperbarui Kebijakan Privasi ini dari waktu ke waktu. Perubahan akan diberitahukan melalui 
+          pembaruan tanggal "Terakhir diperbarui" di bagian atas halaman ini. Kami menyarankan Anda untuk meninjau 
+          halaman ini secara berkala untuk tetap mengetahui bagaimana kami melindungi informasi Anda.
+        </p>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">11. Yurisdiksi dan Hukum yang Berlaku</h2>
+        <p class="text-gray-700">
+          Kebijakan Privasi ini diatur oleh hukum Republik Indonesia. Setiap sengketa yang timbul akan diselesaikan 
+          melalui pengadilan yang berwenang di Indonesia.
+        </p>
+      </section>
+
+      <section class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">12. Kontak</h2>
+        <p class="text-gray-700 mb-4">
+          Jika Anda memiliki pertanyaan, kekhawatiran, atau permintaan terkait Kebijakan Privasi ini atau praktik 
+          privasi kami, silakan hubungi kami melalui:
+        </p>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <p class="text-blue-900 mb-2">
+            <strong>Email:</strong> <a href="mailto:info@emitenhub.com" class="text-blue-600 hover:text-blue-700 underline">info@emitenhub.com</a>
+          </p>
+          <p class="text-blue-900">
+            <strong>Website:</strong> <a href="/tentang-kami" class="text-blue-600 hover:text-blue-700 underline">Halaman Tentang Kami</a>
+          </p>
+        </div>
+      </section>
+
+      <div class="bg-gray-50 rounded-lg p-6 border border-gray-200 mt-8">
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Dokumen Terkait</h3>
+        <ul class="space-y-2">
+          <li>
+            <a href="/disclaimer" class="text-blue-600 hover:text-blue-700 underline">Baca Disclaimer</a>
+          </li>
+          <li>
+            <a href="/tentang-kami" class="text-blue-600 hover:text-blue-700 underline">Tentang Kami</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</Layout>
+
