@@ -5,8 +5,8 @@ import FAQ from '../components/FAQ.astro';
 // Site URL akan otomatis detect dari environment variable atau request
 const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
 const pageUrl = `${siteUrl}/faq`;
-const pageTitle = 'Pertanyaan yang Sering Diajukan - SansStocks';
-const pageDescription = 'Temukan jawaban untuk pertanyaan umum seputar investasi saham, pasar modal, dan ekonomi di SansStocks.';
+const pageTitle = 'Pertanyaan yang Sering Diajukan - EmitenHub';
+const pageDescription = 'Temukan jawaban untuk pertanyaan umum seputar investasi saham, pasar modal, dan ekonomi di EmitenHub.';
 const pageImage = `${siteUrl}/logo.png`;
 ---
 
@@ -28,7 +28,7 @@ const pageImage = `${siteUrl}/logo.png`;
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:url" content={pageUrl} />
-    <meta property="og:site_name" content="SansStocks" />
+    <meta property="og:site_name" content="EmitenHub" />
     <meta property="og:locale" content="id_ID" />
     
     {/* Twitter Card */}

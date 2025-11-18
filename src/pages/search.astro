@@ -13,10 +13,10 @@ const offset = (page - 1) * limit;
 
 // Site URL
 const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
-const pageTitle = searchQuery ? `Hasil Pencarian: ${searchQuery} - SansStocks` : 'Pencarian Artikel - SansStocks';
+const pageTitle = searchQuery ? `Hasil Pencarian: ${searchQuery} - EmitenHub` : 'Pencarian Artikel - EmitenHub';
 const pageDescription = searchQuery 
-   ? `Hasil pencarian untuk "${searchQuery}" di SansStocks. Temukan artikel terbaru tentang ${searchQuery}.`
-   : 'Cari artikel berita ekonomi, saham, dan analisis pasar di SansStocks.';
+   ? `Hasil pencarian untuk "${searchQuery}" di EmitenHub. Temukan artikel terbaru tentang ${searchQuery}.`
+   : 'Cari artikel berita ekonomi, saham, dan analisis pasar di EmitenHub.';
 const pageImage = `${siteUrl}/logo.png`;
 
 // Fetch articles based on search query

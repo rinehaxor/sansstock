@@ -41,16 +41,52 @@ export const GET: APIRoute = async (context) => {
       return createErrorResponse(ErrorMessages.INVALID_INPUT, 400, 'GET /api/underwriters/[id]');
    }
 
-   const { client, error } = await requireAdminClient(context);
-   if (!client) {
-      return error!;
+   // Check if include_ipos query param is present (public access for comparison feature)
+   const includeIpos = context.url.searchParams.get('include_ipos') === 'true';
+   
+   // Use public client if only fetching IPO data, otherwise require admin
+   let client;
+   if (includeIpos) {
+      const { supabase } = await import('../../../db/supabase');
+      client = supabase;
+   } else {
+      const adminResult = await requireAdminClient(context);
+      if (!adminResult.client) {
+         return adminResult.error!;
+      }
+      client = adminResult.client;
    }
 
-   const { data, error: fetchError } = await client
+   let query = client
       .from('underwriters')
-      .select('id, name, created_at, updated_at')
+      .select(
+         includeIpos
+            ? `
+            id,
+            name,
+            created_at,
+            updated_at,
+            ipo_underwriters:ipo_underwriters (
+               ipo_listing:ipo_listings (
+                  id,
+                  ticker_symbol,
+                  company_name,
+                  ipo_date,
+                  ipo_price,
+                  ipo_performance_metrics:ipo_performance_metrics (
+                     metric_name,
+                     metric_value,
+                     period_days
+                  )
+               )
+            )
+         `
+            : 'id, name, created_at, updated_at'
+      )
       .eq('id', underwriterId)
       .maybeSingle();
+
+   const { data, error: fetchError } = await query;
 
    if (fetchError) {
       return createErrorResponse(fetchError, 500, 'GET /api/underwriters/[id]');

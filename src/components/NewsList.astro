@@ -67,18 +67,19 @@ const articlesWithAltText = await Promise.all(
 );
 ---
 
-<section class="mb-16">
-	<div class="flex items-center justify-between mb-8">
-		<h2 class="text-3xl font-bold text-gray-900">Terkini</h2>
-		<a href="/artikel" class="text-blue-600 hover:text-blue-700 font-medium flex items-center group">
-			Lihat Semua
+<section class="mb-8 sm:mb-16">
+	<div class="flex items-center justify-between mb-4 sm:mb-8">
+		<h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Terkini</h2>
+		<a href="/artikel" class="text-blue-600 hover:text-blue-700 font-medium flex items-center group text-sm sm:text-base">
+			<span class="hidden sm:inline">Lihat Semua</span>
+			<span class="sm:hidden">Semua</span>
 			<svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
 			</svg>
 		</a>
 	</div>
 	
-	<div class="grid lg:grid-cols-3 gap-8">
+	<div class="grid lg:grid-cols-3 gap-4 sm:gap-8">
 		<!-- Main News Content -->
 		<div class="lg:col-span-2">
 			<!-- News List with Pagination (Client-side) -->

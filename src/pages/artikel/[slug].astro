@@ -267,7 +267,7 @@ const tags = allKeywords.join(', ') || '';
 ---
 
 <Layout 
-  title={`${metaTitle} - SansStocks`}
+  title={`${metaTitle} - EmitenHub`}
   description={metaDescription}
   keywords={tags}
 >
@@ -285,12 +285,12 @@ const tags = allKeywords.join(', ') || '';
     <meta property="og:image:height" content="675" />
     {thumbnailAltText && <meta property="og:image:alt" content={thumbnailAltText} />}
     <meta property="og:url" content={articleUrl} />
-    <meta property="og:site_name" content="SansStocks" />
+    <meta property="og:site_name" content="EmitenHub" />
     <meta property="og:locale" content="id_ID" />
     {article.published_at && <meta property="article:published_time" content={article.published_at} />}
     {article.updated_at && <meta property="article:modified_time" content={article.updated_at} />}
     {article.categories && <meta property="article:section" content={article.categories.name} />}
-    <meta property="article:author" content="SansStocks" />
+    <meta property="article:author" content="EmitenHub" />
     {article.article_tags && article.article_tags.length > 0 && (
       article.article_tags.map((at: any) => at.tags && (
         <meta property="article:tag" content={at.tags.name} />

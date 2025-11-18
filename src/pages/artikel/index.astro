@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 // Site URL akan otomatis detect dari environment variable atau request
 const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
 const pageUrl = `${siteUrl}/artikel`;
-const pageTitle = 'Artikel Terbaru - SansStocks';
+const pageTitle = 'Artikel Terbaru - EmitenHub';
 const pageDescription = 'Temukan analisis mendalam, berita terkini, dan insight terbaru dari dunia ekonomi dan pasar saham Indonesia.';
 const pageImage = `${siteUrl}/logo.png`;
 ---
@@ -31,7 +31,7 @@ const pageImage = `${siteUrl}/logo.png`;
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:url" content={pageUrl} />
-    <meta property="og:site_name" content="SansStocks" />
+    <meta property="og:site_name" content="EmitenHub" />
     <meta property="og:locale" content="id_ID" />
     
     {/* Twitter Card */}
@@ -145,7 +145,7 @@ const pageImage = `${siteUrl}/logo.png`;
                   </div>
                   <div>
                     <p class="text-sm font-medium">Tim Editorial</p>
-                    <p class="text-xs text-gray-500">SansStocks</p>
+                    <p class="text-xs text-gray-500">EmitenHub</p>
                   </div>
                 </div>
                 <a href="/artikel/bank-indonesia-suku-bunga" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
@@ -182,7 +182,7 @@ const pageImage = `${siteUrl}/logo.png`;
                   </div>
                   <div>
                     <p class="text-sm font-medium">Analis Pasar</p>
-                    <p class="text-xs text-gray-500">SansStocks</p>
+                    <p class="text-xs text-gray-500">EmitenHub</p>
                   </div>
                 </div>
                 <a href="/artikel/ihsg-menguat" class="text-green-600 hover:text-green-700 text-sm font-medium">
@@ -219,7 +219,7 @@ const pageImage = `${siteUrl}/logo.png`;
                   </div>
                   <div>
                     <p class="text-sm font-medium">Kripto Expert</p>
-                    <p class="text-xs text-gray-500">SansStocks</p>
+                    <p class="text-xs text-gray-500">EmitenHub</p>
                   </div>
                 </div>
                 <a href="/artikel/bitcoin-stabil" class="text-purple-600 hover:text-purple-700 text-sm font-medium">
@@ -256,7 +256,7 @@ const pageImage = `${siteUrl}/logo.png`;
                   </div>
                   <div>
                     <p class="text-sm font-medium">Analis Fundamental</p>
-                    <p class="text-xs text-gray-500">SansStocks</p>
+                    <p class="text-xs text-gray-500">EmitenHub</p>
                   </div>
                 </div>
                 <a href="/artikel/analisis-bca" class="text-orange-600 hover:text-orange-700 text-sm font-medium">
@@ -293,7 +293,7 @@ const pageImage = `${siteUrl}/logo.png`;
                   </div>
                   <div>
                     <p class="text-sm font-medium">Ekonom Senior</p>
-                    <p class="text-xs text-gray-500">SansStocks</p>
+                    <p class="text-xs text-gray-500">EmitenHub</p>
                   </div>
                 </div>
                 <a href="/artikel/inflasi-oktober" class="text-red-600 hover:text-red-700 text-sm font-medium">
@@ -330,7 +330,7 @@ const pageImage = `${siteUrl}/logo.png`;
                   </div>
                   <div>
                     <p class="text-sm font-medium">Forex Analyst</p>
-                    <p class="text-xs text-gray-500">SansStocks</p>
+                    <p class="text-xs text-gray-500">EmitenHub</p>
                   </div>
                 </div>
                 <a href="/artikel/rupiah-menguat" class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">

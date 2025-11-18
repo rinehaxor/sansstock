@@ -201,7 +201,7 @@ export default function NewsPagination({ initialPage = 1, initialArticles = [], 
    if (totalPages <= 1) {
       // Just render articles, no pagination
       return (
-         <div id="news-list-section" className="space-y-8">
+         <div id="news-list-section" className="space-y-4 sm:space-y-8">
             {articles.map((article) => (
                <NewsCard
                   key={article.id}
@@ -225,7 +225,7 @@ export default function NewsPagination({ initialPage = 1, initialArticles = [], 
          <style>{animationStyles}</style>
 
          {/* Articles List */}
-         <div id="news-list-section" className="space-y-8 relative min-h-[400px]">
+         <div id="news-list-section" className="space-y-4 sm:space-y-8 relative min-h-[400px]">
             {/* Loading Overlay */}
             {loading && (
                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-10 rounded-lg">
@@ -240,7 +240,7 @@ export default function NewsPagination({ initialPage = 1, initialArticles = [], 
                   ? articles.map((article, index) => (
                        <div
                           key={`${article.id}-${currentPage}`}
-                          className="article-item my-3"
+                          className="article-item my-2 sm:my-3"
                           style={{
                              animation: `fadeInUp 0.4s ease-out ${index * 0.05}s both`,
                           }}
@@ -267,7 +267,7 @@ export default function NewsPagination({ initialPage = 1, initialArticles = [], 
          </div>
 
          {/* Pagination */}
-         <div className="mt-8">
+         <div className="mt-4 sm:mt-8">
             <Pagination>
                <PaginationContent>
                   <PaginationItem>

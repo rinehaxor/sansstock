@@ -46,6 +46,11 @@ const rateLimitConfigs: Record<string, RateLimitConfig> = {
       windowMs: 60 * 1000, // 1 minute
       maxRequests: 200, // 200 requests per minute
    },
+   // View endpoint - very strict to prevent view spam
+   view: {
+      windowMs: 60 * 1000, // 1 minute
+      maxRequests: 10, // 10 view requests per minute per IP (prevents rapid spam)
+   },
 };
 
 /**
@@ -189,5 +194,12 @@ export function uploadRateLimit(context: APIContext): Response | null {
  */
 export function publicRateLimit(context: APIContext): Response | null {
    return rateLimitMiddleware(context, 'public');
+}
+
+/**
+ * Rate limit for view endpoints (prevents view spam)
+ */
+export function viewRateLimit(context: APIContext): Response | null {
+   return rateLimitMiddleware(context, 'view');
 }
 

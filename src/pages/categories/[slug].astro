@@ -23,8 +23,8 @@ if (categoryError || !category) {
 // Site URL akan otomatis detect dari environment variable atau request
 const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
 const categoryUrl = `${siteUrl}/categories/${category.slug}`;
-const pageTitle = `${category.name} - SansStocks`;
-const pageDescription = category.description || `Semua artikel tentang ${category.name} di SansStocks. Dapatkan insight terbaru dan analisis mendalam tentang ${category.name}.`;
+const pageTitle = `${category.name} - EmitenHub`;
+const pageDescription = category.description || `Semua artikel tentang ${category.name} di EmitenHub. Dapatkan insight terbaru dan analisis mendalam tentang ${category.name}.`;
 const pageImage = `${siteUrl}/logo.png`;
 
 // Fetch 3 latest articles from this category for featured section
@@ -153,7 +153,7 @@ function getCategoryColor(categoryName: string): string {
 <Layout 
    title={pageTitle}
    description={pageDescription}
-   keywords={`${category.name}, berita ekonomi, saham, analisis pasar, SansStocks`}
+   keywords={`${category.name}, berita ekonomi, saham, analisis pasar, EmitenHub`}
 >
    <Fragment slot="head">
       {/* Robots Meta */}
@@ -168,7 +168,7 @@ function getCategoryColor(categoryName: string): string {
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:url" content={categoryUrl} />
-      <meta property="og:site_name" content="SansStocks" />
+      <meta property="og:site_name" content="EmitenHub" />
       <meta property="og:locale" content="id_ID" />
       
       {/* Twitter Card */}

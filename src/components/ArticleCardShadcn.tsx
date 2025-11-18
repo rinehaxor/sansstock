@@ -77,7 +77,7 @@ export default function ArticleCardShadcn({ title, excerpt, category, categoryCo
                   </div>
                   <div>
                      <p className={`${isLarge ? 'text-sm' : 'text-xs'} font-medium`}>{author || 'Tim Editorial'}</p>
-                     <p className={`${isLarge ? 'text-xs' : 'text-xs'} text-muted-foreground`}>SansStocks</p>
+                     <p className={`${isLarge ? 'text-xs' : 'text-xs'} text-muted-foreground`}>EmitenHub</p>
                   </div>
                </div>
                <a href={link} className={`text-blue-600 hover:text-blue-700 font-medium ${isLarge ? 'flex items-center group text-sm sm:text-base' : 'text-sm'}`}>

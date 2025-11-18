@@ -69,6 +69,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       const underwriterId = searchParams.get('underwriter_id');
       const tickerSymbol = searchParams.get('ticker_symbol');
       const search = searchParams.get('search');
+      const ids = searchParams.get('ids'); // Comma-separated list of IPO IDs
 
       let query = supabase
          .from('ipo_listings')
@@ -97,12 +98,26 @@ export const GET: APIRoute = async ({ request, url }) => {
                   id,
                   name
                )
+            ),
+            ipo_performance_metrics:ipo_performance_metrics (
+               id,
+               metric_name,
+               metric_value,
+               period_days
             )
          `,
             { count: 'exact' }
-         )
-         .order('ipo_date', { ascending: false })
-         .range((page - 1) * limit, page * limit - 1);
+         );
+
+      // Filter by IDs if provided (for comparison feature)
+      if (ids) {
+         const idArray = ids.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+         if (idArray.length > 0) {
+            query = query.in('id', idArray);
+         }
+      } else {
+         query = query.order('ipo_date', { ascending: false }).range((page - 1) * limit, page * limit - 1);
+      }
 
       // Filter by underwriter - we'll need to use a join instead
       // This is handled after the query with post-processing for now
