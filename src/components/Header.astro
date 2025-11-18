@@ -151,5 +151,19 @@ import logo from '../assets/logo.png';
         }
       });
     }
+
+    // Prefetch links on hover untuk faster navigation
+    const links = document.querySelectorAll('a[href^="/"]');
+    links.forEach(link => {
+      link.addEventListener('mouseenter', function() {
+        const href = this.getAttribute('href');
+        if (href && !document.querySelector(`link[rel="prefetch"][href="${href}"]`)) {
+          const prefetchLink = document.createElement('link');
+          prefetchLink.rel = 'prefetch';
+          prefetchLink.href = href;
+          document.head.appendChild(prefetchLink);
+        }
+      }, { once: true });
+    });
   });
 </script>

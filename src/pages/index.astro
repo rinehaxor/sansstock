@@ -8,41 +8,47 @@ import MarketOverview from '../components/MarketOverview.astro';
 import NewsList from '../components/NewsList.astro';
 import CategoryTabs from '../components/CategoryTabs.tsx';
 import { supabase } from '../db/supabase';
+import { cache, CACHE_KEYS } from '../lib/cache';
 
-// Fetch categories that have published articles - optimized query
-// Approach: Get distinct category IDs from published articles, then fetch categories
-let availableCategories: any[] = [];
+// Fetch categories that have published articles - dengan caching (5 menit)
+// Categories tidak sering berubah, jadi cache aman
+const availableCategories = await cache.getOrSet(
+  CACHE_KEYS.CATEGORIES,
+  async () => {
+    try {
+      // First, get distinct category IDs that have published articles
+      const { data: publishedCategoryIds } = await supabase
+        .from('articles')
+        .select('category_id')
+        .eq('status', 'published')
+        .not('category_id', 'is', null);
 
-try {
-  // First, get distinct category IDs that have published articles
-  const { data: publishedCategoryIds } = await supabase
-    .from('articles')
-    .select('category_id')
-    .eq('status', 'published')
-    .not('category_id', 'is', null);
+      if (publishedCategoryIds && publishedCategoryIds.length > 0) {
+        // Extract unique category IDs
+        const uniqueCategoryIds = [...new Set(publishedCategoryIds.map((a: any) => a.category_id))];
 
-  if (publishedCategoryIds && publishedCategoryIds.length > 0) {
-    // Extract unique category IDs
-    const uniqueCategoryIds = [...new Set(publishedCategoryIds.map((a: any) => a.category_id))];
+        // Fetch categories for those IDs
+        const { data: categories } = await supabase
+          .from('categories')
+          .select('id, name, slug, description')
+          .in('id', uniqueCategoryIds)
+          .order('name', { ascending: true });
 
-    // Fetch categories for those IDs
-    const { data: categories } = await supabase
-      .from('categories')
-      .select('id, name, slug, description')
-      .in('id', uniqueCategoryIds)
-      .order('name', { ascending: true });
-
-    availableCategories = categories || [];
-  }
-} catch (error) {
-  console.error('Error fetching categories:', error);
-  // Fallback: fetch all categories if query fails
-  const { data: allCategories } = await supabase
-    .from('categories')
-    .select('id, name, slug, description')
-    .order('name', { ascending: true });
-  availableCategories = allCategories || [];
-}
+        return categories || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      // Fallback: fetch all categories if query fails
+      const { data: allCategories } = await supabase
+        .from('categories')
+        .select('id, name, slug, description')
+        .order('name', { ascending: true });
+      return allCategories || [];
+    }
+  },
+  5 * 60 * 1000 // Cache 5 menit
+);
 
 // Site URL akan otomatis detect dari environment variable atau request
 const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');

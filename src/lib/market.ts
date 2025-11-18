@@ -1,3 +1,5 @@
+import { cache, CACHE_KEYS } from './cache';
+
 interface MarketData {
   name: string;
   symbol: string;
@@ -63,8 +65,19 @@ async function fetchYahooFinanceData(symbol: string): Promise<MarketData | null>
 /**
  * Fetch market data untuk symbols yang diberikan
  * Optimasi: langsung fetch tanpa HTTP request internal
+ * Dengan caching untuk mengurangi external API calls
  */
 export async function getMarketData(symbols?: string[]): Promise<MarketData[]> {
+  // Cache key berdasarkan symbols
+  const cacheKey = symbols && symbols.length > 0 
+    ? `${CACHE_KEYS.MARKET_DATA}:${symbols.join(',')}`
+    : CACHE_KEYS.MARKET_DATA;
+
+  // Check cache first (cache 1 menit untuk market data)
+  const cached = cache.get<MarketData[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
   // Default symbols untuk market overview
   const defaultSymbols = [
     { symbol: '^JKSE', name: 'IHSG' },
@@ -144,6 +157,10 @@ export async function getMarketData(symbols?: string[]): Promise<MarketData[]> {
   });
 
   const marketData = await Promise.all(marketDataPromises);
+  
+  // Cache hasil (1 menit untuk market data yang real-time)
+  cache.set(cacheKey, marketData, 60 * 1000);
+  
   return marketData;
 }
 
