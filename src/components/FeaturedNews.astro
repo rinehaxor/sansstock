@@ -1,6 +1,7 @@
 ---
 import ArticleCard from './ArticleCard.astro';
 import { supabase } from '../db/supabase';
+import { batchGetAltText } from '../lib/utils';
 
 // Fetch featured articles
 const { data: featuredArticles } = await supabase
@@ -23,33 +24,15 @@ const { data: featuredArticles } = await supabase
   .order('published_at', { ascending: false })
   .limit(3);
 
-// Helper function untuk get alt text dari media_metadata
-async function getAltText(thumbnailUrl: string | null): Promise<string | null> {
-  if (!thumbnailUrl) return null;
-  
-  try {
-    const { data: mediaMetadata } = await supabase
-      .from('media_metadata')
-      .select('alt_text')
-      .eq('file_url', thumbnailUrl)
-      .single();
-    
-    return mediaMetadata?.alt_text || null;
-  } catch (e) {
-    return null;
-  }
-}
+// Batch fetch alt text untuk semua artikel sekaligus (optimasi N+1 query)
+const thumbnailUrls = (featuredArticles || []).map((article: any) => article.thumbnail_url);
+const altTextMap = await batchGetAltText(thumbnailUrls);
 
-// Get alt text untuk semua artikel dari media_metadata
-const articlesWithAltText = await Promise.all(
-  (featuredArticles || []).map(async (article: any) => {
-    const altText = await getAltText(article.thumbnail_url);
-    return {
-      ...article,
-      thumbnail_alt: altText,
-    };
-  })
-);
+// Map alt text ke artikel
+const articlesWithAltText = (featuredArticles || []).map((article: any) => ({
+  ...article,
+  thumbnail_alt: article.thumbnail_url ? (altTextMap.get(article.thumbnail_url) || null) : null,
+}));
 
 // Helper function untuk format waktu relatif
 function getTimeAgo(dateString: string | null): string {

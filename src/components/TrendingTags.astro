@@ -3,44 +3,49 @@ export const prerender = false;
 
 import { supabase } from '../db/supabase';
 
-// Fetch popular tags (tags with most articles)
-const { data: articleTags } = await supabase
-  .from('article_tags')
-  .select('tag_id');
+// Optimasi: Fetch popular tags dengan join query untuk menghindari multiple queries
+// Menggunakan RPC atau query dengan aggregation jika tersedia
+// Fallback ke approach yang lebih efisien dengan limit
 
-// Count tag usage
-const tagUsage: Record<number, number> = {};
-if (articleTags) {
-  articleTags.forEach((at: any) => {
-    tagUsage[at.tag_id] = (tagUsage[at.tag_id] || 0) + 1;
+// Fetch popular tags dengan join - lebih efisien
+const { data: articleTagsWithDetails } = await supabase
+  .from('article_tags')
+  .select(`
+    tag_id,
+    tags:tag_id (
+      id,
+      name,
+      slug
+    )
+  `)
+  .limit(1000); // Limit untuk performa, cukup untuk menghitung popularitas
+
+// Count tag usage dan collect tag details
+const tagUsage: Record<number, { count: number; tag: any }> = {};
+if (articleTagsWithDetails) {
+  articleTagsWithDetails.forEach((at: any) => {
+    const tagId = at.tag_id;
+    if (!tagUsage[tagId]) {
+      tagUsage[tagId] = {
+        count: 0,
+        tag: at.tags,
+      };
+    }
+    tagUsage[tagId].count += 1;
   });
 }
 
-// Get tag IDs sorted by usage (most used first)
-const sortedTagIds = Object.entries(tagUsage)
-  .sort(([, a], [, b]) => (b as number) - (a as number))
-  .slice(0, 10)
-  .map(([tagId]) => parseInt(tagId));
-
-// Fetch tag details
-let trendingTags: any[] = [];
-if (sortedTagIds.length > 0) {
-  const { data: tags } = await supabase
-    .from('tags')
-    .select('id, name, slug')
-    .in('id', sortedTagIds);
-
-  if (tags) {
-    // Sort by usage count
-    trendingTags = tags
-      .map((tag: any) => ({
-        ...tag,
-        count: tagUsage[tag.id] || 0,
-      }))
-      .sort((a: any, b: any) => b.count - a.count)
-      .slice(0, 8); // Show top 8 tags
-  }
-}
+// Sort by usage count and get top 8
+const trendingTags = Object.values(tagUsage)
+  .filter((item) => item.tag !== null) // Filter out null tags
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 8)
+  .map((item) => ({
+    id: item.tag.id,
+    name: item.tag.name,
+    slug: item.tag.slug,
+    count: item.count,
+  }));
 ---
 
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mt-6">

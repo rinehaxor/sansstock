@@ -6,6 +6,7 @@ import PopularNews from './PopularNews.astro';
 import AdsWidget from './AdsWidget.astro';
 import TrendingTags from './TrendingTags.astro';
 import NewsPagination from './NewsPagination.tsx';
+import { batchGetAltText } from '../lib/utils';
 
 // Get page from URL query parameter
 const page = parseInt(Astro.url.searchParams.get('page') || '1');
@@ -38,33 +39,15 @@ const { data: articles, error, count } = await supabase
 const totalArticles = count || 0;
 const totalPages = Math.ceil(totalArticles / limit);
 
-// Helper function untuk get alt text dari media_metadata
-async function getAltText(thumbnailUrl: string | null): Promise<string | null> {
-  if (!thumbnailUrl) return null;
-  
-  try {
-    const { data: mediaMetadata } = await supabase
-      .from('media_metadata')
-      .select('alt_text')
-      .eq('file_url', thumbnailUrl)
-      .single();
-    
-    return mediaMetadata?.alt_text || null;
-  } catch (e) {
-    return null;
-  }
-}
+// Batch fetch alt text untuk semua artikel sekaligus (optimasi N+1 query)
+const thumbnailUrls = (articles || []).map((article: any) => article.thumbnail_url);
+const altTextMap = await batchGetAltText(thumbnailUrls);
 
-// Get alt text untuk semua artikel dari media_metadata
-const articlesWithAltText = await Promise.all(
-  (articles || []).map(async (article: any) => {
-    const altText = await getAltText(article.thumbnail_url);
-    return {
-      ...article,
-      thumbnail_alt: altText,
-    };
-  })
-);
+// Map alt text ke artikel
+const articlesWithAltText = (articles || []).map((article: any) => ({
+  ...article,
+  thumbnail_alt: article.thumbnail_url ? (altTextMap.get(article.thumbnail_url) || null) : null,
+}));
 ---
 
 <section class="mb-8 sm:mb-16">

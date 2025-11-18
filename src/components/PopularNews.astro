@@ -1,6 +1,7 @@
 ---
 import { Image } from 'astro:assets';
 import { supabase } from '../db/supabase';
+import { batchGetAltText } from '../lib/utils';
 
 // Fetch popular articles - most viewed articles that are still relevant
 // Since we track total views_count (not per day), we'll prioritize:
@@ -130,33 +131,15 @@ if (!popularArticles || popularArticles.length === 0) {
    popularArticles = fallbackArticles || [];
 }
 
-// Helper function untuk get alt text dari media_metadata
-async function getAltText(thumbnailUrl: string | null): Promise<string | null> {
-  if (!thumbnailUrl) return null;
-  
-  try {
-    const { data: mediaMetadata } = await supabase
-      .from('media_metadata')
-      .select('alt_text')
-      .eq('file_url', thumbnailUrl)
-      .single();
-    
-    return mediaMetadata?.alt_text || null;
-  } catch (e) {
-    return null;
-  }
-}
+// Batch fetch alt text untuk semua artikel sekaligus (optimasi N+1 query)
+const thumbnailUrls = (popularArticles || []).map((article: any) => article.thumbnail_url);
+const altTextMap = await batchGetAltText(thumbnailUrls);
 
-// Get alt text untuk semua artikel dari media_metadata
-const articlesWithAltText = await Promise.all(
-  (popularArticles || []).map(async (article: any) => {
-    const altText = await getAltText(article.thumbnail_url);
-    return {
-      ...article,
-      thumbnail_alt: altText,
-    };
-  })
-);
+// Map alt text ke artikel
+const articlesWithAltText = (popularArticles || []).map((article: any) => ({
+  ...article,
+  thumbnail_alt: article.thumbnail_url ? (altTextMap.get(article.thumbnail_url) || null) : null,
+}));
 
 // Helper function to format time ago
 function getTimeAgo(dateString: string): string {
