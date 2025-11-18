@@ -1,5 +1,7 @@
 ---
-export const prerender = false;
+// Prerender homepage untuk instant load (no loading screen)
+// Data akan di-fetch saat build time, jadi homepage jadi static
+export const prerender = true;
 
 import Layout from '../layouts/Layout.astro';
 import MarketTicker from '../components/MarketTicker.astro';

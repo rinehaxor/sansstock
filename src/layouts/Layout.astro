@@ -97,6 +97,27 @@ const {
 		</main>
 		<Footer />
 		<Toaster client:idle />
+		
+		<!-- Loading indicator untuk initial page load -->
+		<script is:inline>
+			// Hide loading indicator setelah page load
+			(function() {
+				if (document.readyState === 'loading') {
+					document.addEventListener('DOMContentLoaded', function() {
+						// Page sudah loaded, hide loading indicator jika ada
+						const loader = document.getElementById('initial-loader');
+						if (loader) {
+							loader.style.opacity = '0';
+							setTimeout(() => loader.remove(), 300);
+						}
+					});
+				} else {
+					// DOM already ready
+					const loader = document.getElementById('initial-loader');
+					if (loader) loader.remove();
+				}
+			})();
+		</script>
 	</body>
 </html>
 

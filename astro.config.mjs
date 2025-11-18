@@ -8,7 +8,7 @@ export default defineConfig({
    // Site URL akan diambil dari environment variable SITE_URL
    // Jika tidak ada, akan menggunakan fallback atau detect otomatis saat runtime
    site: import.meta.env.SITE_URL || undefined, // undefined = Astro akan detect otomatis
-   output: 'server',
+   output: 'hybrid', // Hybrid mode: homepage static, dynamic pages SSR
    adapter: node({
       mode: 'standalone',
    }),
