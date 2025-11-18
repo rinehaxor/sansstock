@@ -1,7 +1,7 @@
 ---
-// Prerender homepage untuk instant load (no loading screen)
-// Data akan di-fetch saat build time, jadi homepage jadi static
-export const prerender = true;
+// Tetap SSR untuk dynamic content
+// Optimasi dilakukan dengan: cache, parallel queries, dan warmup
+export const prerender = false;
 
 import Layout from '../layouts/Layout.astro';
 import MarketTicker from '../components/MarketTicker.astro';
