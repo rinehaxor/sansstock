@@ -14,6 +14,7 @@ interface Props {
    thumbnailUrl?: string | null;
    thumbnailAlt?: string | null;
    eagerLoad?: boolean;
+   fetchPriority?: 'high' | 'low' | 'auto';
 }
 
 const {
@@ -29,6 +30,7 @@ const {
    thumbnailUrl,
    thumbnailAlt,
    eagerLoad = false,
+   fetchPriority = 'auto',
 } = Astro.props;
 ---
 
@@ -44,7 +46,9 @@ const {
                height={isLarge ? 343 : 225}
                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                loading={isLarge || eagerLoad ? 'eager' : 'lazy'}
+               fetchpriority={fetchPriority}
                format="webp"
+               sizes={isLarge ? "(max-width: 768px) 100vw, 800px" : "(max-width: 640px) 100vw, 400px"}
             />
             <div class="absolute inset-0 bg-black/20"></div>
          </>

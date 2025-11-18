@@ -61,6 +61,8 @@ const articleUrl = `/artikel/${slug}`;
           class="w-48 h-28 rounded-lg object-cover" 
           loading="lazy"
           format="webp"
+          fetchpriority="low"
+          sizes="(max-width: 640px) 100vw, 192px"
         />
       ) : (
         <div class="w-48 h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">

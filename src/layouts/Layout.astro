@@ -30,14 +30,19 @@ const {
 		<meta name="publisher" content="EmitenHub" />
 		<meta name="theme-color" content="#2563eb" />
 		<title>{title}</title>
+		
+		<!-- Preconnect to external domains for better performance (early connection) -->
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-		
-		<!-- Preconnect to external domains for better performance -->
-		<link rel="preconnect" href="https://supabase.co" crossorigin />
+		<link rel="preconnect" href="https://pintu.co.id" crossorigin>
+		<link rel="preconnect" href="https://aitfpijkletoyuxujmnc.supabase.co" crossorigin>
 		<link rel="dns-prefetch" href="https://supabase.co" />
-		<link rel="dns-prefetch" href="https://pintu.co.id" />
+		
+		<!-- Preload font CSS untuk faster loading -->
+		<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+		<noscript>
+			<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+		</noscript>
 		
 		<!-- RSS Feed -->
 		<link rel="alternate" type="application/rss+xml" title="EmitenHub RSS Feed" href="/rss.xml" />
