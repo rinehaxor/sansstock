@@ -9,10 +9,14 @@ import NewsList from '../components/NewsList.astro';
 import CategoryTabs from '../components/CategoryTabs.tsx';
 import { supabase } from '../db/supabase';
 import { cache, CACHE_KEYS } from '../lib/cache';
+import { getMarketData } from '../lib/market';
+import { batchGetAltText } from '../lib/utils';
 
-// Fetch categories that have published articles - dengan caching (5 menit)
-// Categories tidak sering berubah, jadi cache aman
-const availableCategories = await cache.getOrSet(
+// OPTIMASI: Parallel fetch untuk semua independent data
+// Ini mengurangi total waktu dari sequential ke parallel execution
+
+// 1. Categories (dengan cache)
+const categoriesPromise = cache.getOrSet(
   CACHE_KEYS.CATEGORIES,
   async () => {
     try {
@@ -49,6 +53,97 @@ const availableCategories = await cache.getOrSet(
   },
   5 * 60 * 1000 // Cache 5 menit
 );
+
+// 2. Market data (dengan cache, non-blocking)
+// Gunakan Promise.race untuk tidak block jika lambat
+const marketDataPromise = Promise.race([
+  getMarketData(),
+  new Promise<never>((_, reject) => 
+    setTimeout(() => reject(new Error('Market data timeout')), 2000) // 2 second timeout
+  )
+]).catch(() => {
+  // Fallback ke empty array jika timeout, component akan handle
+  return [];
+});
+
+// 3. Featured articles (parallel dengan categories)
+const featuredArticlesPromise = supabase
+  .from('articles')
+  .select(`
+    id,
+    title,
+    slug,
+    summary,
+    thumbnail_url,
+    published_at,
+    categories:category_id (
+      id,
+      name,
+      slug
+    )
+  `)
+  .eq('status', 'published')
+  .eq('featured', true)
+  .order('published_at', { ascending: false })
+  .limit(3);
+
+// 4. News list (parallel)
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 10;
+const offset = (page - 1) * limit;
+const newsListPromise = supabase
+  .from('articles')
+  .select(`
+    id,
+    title,
+    slug,
+    summary,
+    thumbnail_url,
+    published_at,
+    created_at,
+    views_count,
+    categories:category_id (
+      id,
+      name,
+      slug
+    )
+  `, { count: 'exact' })
+  .eq('status', 'published')
+  .order('published_at', { ascending: false })
+  .range(offset, offset + limit - 1);
+
+// Wait untuk semua parallel queries
+const [availableCategories, marketData, featuredResult, newsListResult] = await Promise.all([
+  categoriesPromise,
+  marketDataPromise,
+  featuredArticlesPromise,
+  newsListResult,
+]);
+
+// Extract data dari results
+const featuredArticles = featuredResult.data || [];
+const newsArticles = newsListResult.data || [];
+const newsCount = newsListResult.count || 0;
+const totalPages = Math.ceil(newsCount / limit);
+
+// Batch fetch alt text untuk semua articles sekaligus (parallel)
+const allThumbnailUrls = [
+  ...featuredArticles.map((a: any) => a.thumbnail_url),
+  ...newsArticles.map((a: any) => a.thumbnail_url),
+].filter(Boolean);
+
+const allAltTextMap = await batchGetAltText(allThumbnailUrls);
+
+// Map alt text ke articles
+const featuredArticlesWithAlt = featuredArticles.map((article: any) => ({
+  ...article,
+  thumbnail_alt: article.thumbnail_url ? (allAltTextMap.get(article.thumbnail_url) || null) : null,
+}));
+
+const newsArticlesWithAlt = newsArticles.map((article: any) => ({
+  ...article,
+  thumbnail_alt: article.thumbnail_url ? (allAltTextMap.get(article.thumbnail_url) || null) : null,
+}));
 
 // Site URL akan otomatis detect dari environment variable atau request
 const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${Astro.url.protocol}//${Astro.url.host}` : 'http://localhost:4321');
@@ -163,8 +258,9 @@ const pageImage = `${siteUrl}/logo.png`;
 	<FeaturedNews />
 	<MarketOverview />
 	<CategoryTabs 
-		client:load 
+		client:visible 
 		categories={JSON.stringify(availableCategories)} 
+		initialCategoryId={availableCategories && availableCategories.length > 0 ? availableCategories[0].id : undefined}
 	/>
 	<NewsList />
 	</div>

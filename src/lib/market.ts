@@ -127,13 +127,13 @@ export async function getMarketData(symbols?: string[]): Promise<MarketData[]> {
   };
 
   // Fetch data untuk semua symbols secara parallel
-  // Dengan timeout yang lebih pendek untuk VPS yang lambat
+  // Dengan timeout yang lebih pendek untuk VPS yang lambat (1.5 detik per symbol)
   const marketDataPromises = symbolsToFetch.map(async ({ symbol, name }) => {
     try {
-      // Coba fetch dari Yahoo Finance dengan timeout
+      // Coba fetch dari Yahoo Finance dengan shorter timeout untuk cold start
       const data = await Promise.race([
         fetchYahooFinanceData(symbol),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)), // 3 second timeout
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)), // 1.5 second timeout (lebih cepat)
       ]);
 
       if (data) {
@@ -143,7 +143,7 @@ export async function getMarketData(symbols?: string[]): Promise<MarketData[]> {
       // Silently fail
     }
 
-    // Fallback ke default data
+    // Fallback ke default data (instant)
     return (
       defaults[symbol] || {
         name: name,

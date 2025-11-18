@@ -67,7 +67,7 @@ const articlesWithAltText = (articles || []).map((article: any) => ({
 		<div class="lg:col-span-2">
 			<!-- News List with Pagination (Client-side) -->
 			<NewsPagination 
-				client:load
+				client:visible
 				initialPage={page}
 				initialArticles={articlesWithAltText}
 				initialTotalPages={totalPages}

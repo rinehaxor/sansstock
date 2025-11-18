@@ -713,12 +713,15 @@ const tags = allKeywords.join(', ') || '';
   }
 </style>
 
-<script is:inline define:vars={{ articleId: article.id }}>
+<script is:inline define:vars={{ articleId: String(article.id) }}>
   // Track article view on page load
-  if (typeof window !== 'undefined') {
-  (async () => {
-    try {
-      const response = await fetch(`/api/articles/${articleId}/view`, {
+  (function() {
+    const articleId = parseInt(articleId || '0', 10);
+    if (!articleId || typeof window === 'undefined') return;
+    
+    (async () => {
+      try {
+        const response = await fetch(`/api/articles/${articleId}/view`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -743,7 +746,7 @@ const tags = allKeywords.join(', ') || '';
         // Log error for debugging
       console.error('Failed to track article view:', error);
     }
+    })();
   })();
-  }
 </script>
 

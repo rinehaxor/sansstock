@@ -59,7 +59,10 @@ class SimpleCache {
 
   /**
    * Get or set with async function
+   * Prevents race conditions by tracking pending promises
    */
+  private pendingPromises: Map<string, Promise<any>> = new Map();
+
   async getOrSet<T>(
     key: string,
     fn: () => Promise<T>,
@@ -70,9 +73,25 @@ class SimpleCache {
       return cached;
     }
 
-    const data = await fn();
-    this.set(key, data, ttl);
-    return data;
+    // Check if there's already a pending request for this key
+    const pending = this.pendingPromises.get(key);
+    if (pending) {
+      // Wait for the pending request instead of creating a new one
+      return pending as Promise<T>;
+    }
+
+    // Create new promise and track it
+    const promise = fn().then((data) => {
+      this.set(key, data, ttl);
+      this.pendingPromises.delete(key); // Remove from pending after completion
+      return data;
+    }).catch((error) => {
+      this.pendingPromises.delete(key); // Remove from pending on error
+      throw error;
+    });
+
+    this.pendingPromises.set(key, promise);
+    return promise;
   }
 }
 

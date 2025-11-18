@@ -32,11 +32,51 @@ const {
 		<title>{title}</title>
 		
 		<!-- Preconnect to external domains for better performance (early connection) -->
-		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link rel="preconnect" href="https://pintu.co.id" crossorigin>
 		<link rel="preconnect" href="https://aitfpijkletoyuxujmnc.supabase.co" crossorigin>
 		<link rel="dns-prefetch" href="https://supabase.co" />
+		<!-- Jangan preconnect ke pintu.co.id - akan di-load lazy -->
+		
+		<!-- Defer non-critical CSS loading -->
+		<script is:inline>
+			// Defer CSS loading untuk non-critical CSS
+			// Run after DOM ready untuk catch Astro-injected CSS
+			(function() {
+				function deferCSS() {
+					const links = document.querySelectorAll('link[rel="stylesheet"]:not([data-deferred])');
+					links.forEach(link => {
+						const href = link.getAttribute('href');
+						// Skip inline styles, fonts, dan yang sudah di-defer
+						if (href && !href.startsWith('data:') && !href.includes('fonts.googleapis.com') && !link.hasAttribute('data-deferred')) {
+							link.setAttribute('media', 'print');
+							link.setAttribute('onload', "this.media='all';this.setAttribute('data-deferred','true')");
+							link.setAttribute('data-deferred', 'true');
+							// Fallback untuk browsers tanpa onload support
+							if (!link.nextSibling || link.nextSibling.tagName !== 'NOSCRIPT') {
+								const noscript = document.createElement('noscript');
+								const clone = link.cloneNode(true);
+								clone.removeAttribute('media');
+								clone.removeAttribute('onload');
+								noscript.appendChild(clone);
+								link.parentNode.insertBefore(noscript, link.nextSibling);
+							}
+						}
+					});
+				}
+				
+				// Run immediately untuk catch existing links
+				deferCSS();
+				
+				// Run after DOM ready untuk catch Astro-injected CSS
+				if (document.readyState === 'loading') {
+					document.addEventListener('DOMContentLoaded', deferCSS);
+				} else {
+					// DOM already ready, run after a short delay untuk catch Astro CSS
+					setTimeout(deferCSS, 0);
+				}
+			})();
+		</script>
 		
 		<!-- Preload font CSS untuk faster loading -->
 		<link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
@@ -56,7 +96,7 @@ const {
 			<slot />
 		</main>
 		<Footer />
-		<Toaster client:load />
+		<Toaster client:idle />
 	</body>
 </html>
 

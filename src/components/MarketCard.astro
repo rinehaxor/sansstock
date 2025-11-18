@@ -44,9 +44,13 @@ const changeIcon = changeType === 'positive' ? 'M7 11l5-5m0 0l5 5m-5-5v12' : 'M1
 </Card>
 
 {symbol && (
-	<script define:vars={{ symbolValue: symbol }}>
+	<script define:vars={{ symbolValue: String(symbol) }}>
 		// Real-time update untuk market data
-		const card = document.querySelector(`[data-market-card="${symbolValue}"]`);
+		(function() {
+			const symbolValue = symbolValue || '';
+			if (!symbolValue) return;
+			
+			const card = document.querySelector(`[data-market-card="${symbolValue}"]`);
 		if (!card) return;
 
 		const valueEl = card.querySelector('[data-value]');
@@ -101,5 +105,6 @@ const changeIcon = changeType === 'positive' ? 'M7 11l5-5m0 0l5 5m-5-5v12' : 'M1
 				clearInterval(intervalId);
 			});
 		}
+		})();
 	</script>
 )}

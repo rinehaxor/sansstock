@@ -2,7 +2,7 @@
 export const prerender = false;
 ---
 
-<div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg mb-8 overflow-hidden">
+<div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg mb-8 overflow-hidden" id="market-ticker-container">
   <div class="px-6 py-4">
     <div class="flex items-center justify-between mb-3">
       <div class="flex items-center gap-2">
@@ -17,17 +17,72 @@ export const prerender = false;
     </div>
     
     <div class="bg-white/10 backdrop-blur-sm rounded-lg overflow-hidden">
+      <!-- Placeholder saat belum load -->
+      <div id="market-ticker-placeholder" class="h-[60px] flex items-center justify-center">
+        <div class="flex items-center gap-2 text-white/80">
+          <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          <span class="text-sm">Memuat data pasar...</span>
+        </div>
+      </div>
+      
+      <!-- Iframe akan di-load saat visible -->
       <iframe
+        id="market-ticker-iframe"
         title="Market Ticker"
-        src={`https://pintu.co.id/widget/market-ticker?source=${Astro.url.origin}`}
+        data-src={`https://pintu.co.id/widget/market-ticker?source=${Astro.url.origin}`}
         width="100%"
         height="60"
-        style="border:none; border-radius:8px; overflow:hidden; background:transparent;"
+        style="border:none; border-radius:8px; overflow:hidden; background:transparent; display:none;"
         loading="lazy"
         class="w-full"
         sandbox="allow-scripts allow-same-origin"
-        referrerpolicy="no-referrer-when-downgrade"
+        referrerpolicy="no-referrer"
+        importance="low"
       ></iframe>
     </div>
   </div>
 </div>
+
+<script is:inline>
+  // Lazy load Pintu widget dengan Intersection Observer
+  // Ini mengurangi JavaScript execution time di initial load
+  (function() {
+    const container = document.getElementById('market-ticker-container');
+    const placeholder = document.getElementById('market-ticker-placeholder');
+    const iframe = document.getElementById('market-ticker-iframe');
+    
+    if (!container || !placeholder || !iframe) return;
+    
+    // Load iframe saat container visible di viewport
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const src = iframe.getAttribute('data-src');
+          if (src && !iframe.src) {
+            iframe.src = src;
+            iframe.style.display = 'block';
+            placeholder.style.display = 'none';
+          }
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      rootMargin: '50px' // Start loading 50px before visible
+    });
+    
+    observer.observe(container);
+    
+    // Fallback: Load setelah 2 detik jika belum visible
+    setTimeout(() => {
+      if (!iframe.src) {
+        const src = iframe.getAttribute('data-src');
+        if (src) {
+          iframe.src = src;
+          iframe.style.display = 'block';
+          placeholder.style.display = 'none';
+          observer.disconnect();
+        }
+      }
+    }, 2000);
+  })();
+</script>

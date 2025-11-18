@@ -26,5 +26,24 @@ export default defineConfig({
       ssr: {
          noExternal: ['@radix-ui/react-slot'],
       },
+      build: {
+         // Optimize chunk splitting untuk mengurangi unused JS
+         rollupOptions: {
+            output: {
+               manualChunks: (id) => {
+                  // Split vendor chunks
+                  if (id.includes('node_modules')) {
+                     if (id.includes('react') || id.includes('react-dom')) {
+                        return 'react-vendor';
+                     }
+                     if (id.includes('@radix-ui')) {
+                        return 'radix-vendor';
+                     }
+                     return 'vendor';
+                  }
+               },
+            },
+         },
+      },
    },
 });

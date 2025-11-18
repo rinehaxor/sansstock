@@ -44,12 +44,21 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
       const fetchArticles = async () => {
          setLoading(true);
          try {
-            const response = await fetch(`/api/articles?category_id=${activeCategoryId}&status=published&limit=4`);
+            // Use AbortController untuk cancel request jika component unmount
+            const controller = new AbortController();
+            const response = await fetch(`/api/articles?category_id=${activeCategoryId}&status=published&limit=4`, {
+               signal: controller.signal,
+               // Prefetch sudah dilakukan, jadi ini akan menggunakan cached response
+               cache: 'default'
+            });
             if (response.ok) {
                const result = await response.json();
                setArticles(result.data || []);
             }
+            return () => controller.abort();
          } catch (error) {
+            // Ignore abort errors
+            if (error instanceof Error && error.name === 'AbortError') return;
             console.error('Error fetching articles:', error);
             setArticles([]);
          } finally {

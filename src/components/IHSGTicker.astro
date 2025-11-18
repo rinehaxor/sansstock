@@ -116,14 +116,18 @@ const totalPages = Math.ceil(stocks.length / itemsPerPage);
 	</div>
 </div>
 
-<script define:vars={{ totalPages }}>
+<script define:vars={{ totalPages: String(totalPages) }}>
 	// Carousel functionality for IHSG Ticker
-	document.addEventListener('DOMContentLoaded', () => {
-		const container = document.getElementById('ihsg-ticker-slider');
-		const dots = document.querySelectorAll('[data-ticker="ihsg"]');
-		let currentPage = 0;
+	(function() {
+		const totalPages = parseInt(totalPages || '1', 10);
+		if (totalPages <= 1) return;
+		
+		document.addEventListener('DOMContentLoaded', () => {
+			const container = document.getElementById('ihsg-ticker-slider');
+			const dots = document.querySelectorAll('[data-ticker="ihsg"]');
+			let currentPage = 0;
 
-		if (container && dots.length > 0 && totalPages > 1) {
+			if (container && dots.length > 0) {
 			// Update slider position
 			function updateSlider() {
 				if (container) {
@@ -157,8 +161,9 @@ const totalPages = Math.ceil(stocks.length / itemsPerPage);
 				currentPage = (currentPage + 1) % totalPages;
 				updateSlider();
 			}, 5000); // Change slide every 5 seconds
-		}
-	});
+			}
+		});
+	})();
 </script>
 
 <style>
