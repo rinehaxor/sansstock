@@ -273,7 +273,7 @@ const pageImage = `${siteUrl}/logo.png`;
 	<FeaturedNews />
 	<MarketOverview />
 	<CategoryTabs 
-		client:only="react" 
+		client:load 
 		categories={JSON.stringify(availableCategories || [])} 
 		initialCategoryId={availableCategories && availableCategories.length > 0 ? availableCategories[0].id : undefined}
 	/>

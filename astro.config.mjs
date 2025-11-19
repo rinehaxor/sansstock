@@ -2,17 +2,19 @@ import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 import react from '@astrojs/react';
 import node from '@astrojs/node';
+import sitemap from '@astrojs/sitemap';
+
+const siteUrl = process.env.SITE_URL || 'https://emitenhub.com';
 
 // https://astro.build/config
 export default defineConfig({
-   // Site URL akan diambil dari environment variable SITE_URL
-   // Jika tidak ada, akan menggunakan fallback atau detect otomatis saat runtime
-   site: import.meta.env.SITE_URL || undefined, // undefined = Astro akan detect otomatis
+   // Site URL diperlukan untuk sitemap dan SEO metadata
+   site: siteUrl,
    output: 'server', // Server mode (hybrid tidak support dengan node adapter)
    adapter: node({
       mode: 'standalone',
    }),
-   integrations: [tailwind(), react()],
+   integrations: [tailwind(), react(), sitemap()],
    image: {
       domains: ['localhost', 'supabase.co', '*.supabase.co'],
       remotePatterns: [
@@ -24,7 +26,7 @@ export default defineConfig({
    },
    vite: {
       ssr: {
-         noExternal: ['@radix-ui/react-slot'],
+         noExternal: ['@radix-ui/react-slot', '@radix-ui/react-tabs'],
       },
       build: {
          // Optimize chunk splitting untuk mengurangi unused JS
