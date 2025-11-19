@@ -32,11 +32,10 @@ interface CategoryTabsProps {
 }
 
 export default function CategoryTabs({ categories: categoriesProp, initialCategoryId }: CategoryTabsProps) {
-   // Parse categories if it's a JSON string - use useMemo untuk avoid re-parsing
+   // Parse categories if it's a JSON string
    const categories = useMemo(() => {
       try {
          const parsed = typeof categoriesProp === 'string' ? JSON.parse(categoriesProp) : categoriesProp;
-         // Ensure it's an array
          if (!Array.isArray(parsed)) {
             return [];
          }
@@ -46,11 +45,18 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
       }
    }, [categoriesProp]);
 
-   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(() => {
-      if (initialCategoryId) return initialCategoryId;
-      if (categories.length > 0) return categories[0].id;
-      return null;
-   });
+   // Initialize state dengan useEffect untuk avoid hydration mismatch
+   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
+   const [mounted, setMounted] = useState(false);
+
+   useEffect(() => {
+      setMounted(true);
+      if (initialCategoryId) {
+         setActiveCategoryId(initialCategoryId);
+      } else if (categories.length > 0) {
+         setActiveCategoryId(categories[0].id);
+      }
+   }, [initialCategoryId, categories]);
    const [articles, setArticles] = useState<Article[]>([]);
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState<string | null>(null);
@@ -127,7 +133,8 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
       };
    }, [activeCategoryId]);
 
-   if (categories.length === 0) {
+   // Jangan render sampai mounted untuk avoid hydration error
+   if (!mounted || categories.length === 0) {
       return null;
    }
 
