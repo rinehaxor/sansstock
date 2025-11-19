@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 interface Underwriter {
    id: number;
@@ -91,23 +91,21 @@ function getPerformanceRating(avg: number): { label: string; color: string; bgCo
 }
 
 export default function UnderwriterComparison({ underwriters: underwritersJson }: UnderwriterComparisonProps) {
-   const [underwritersList, setUnderwritersList] = useState<Underwriter[]>([]);
+   const underwritersList: Underwriter[] = useMemo(() => {
+      try {
+         const parsed = JSON.parse(underwritersJson);
+         return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+         console.error('Error parsing underwriters:', error);
+         return [];
+      }
+   }, [underwritersJson]);
    const [selectedUnderwriters, setSelectedUnderwriters] = useState<number[]>([]);
    const [numberOfSlots, setNumberOfSlots] = useState<number>(1); // Start with 1 slot
    const [loading, setLoading] = useState(false);
    const [combinedPerformance, setCombinedPerformance] = useState<CombinedPerformance | null>(null);
    const [error, setError] = useState<string | null>(null);
    const [selectedIpoForModal, setSelectedIpoForModal] = useState<IPOListing | null>(null);
-
-   useEffect(() => {
-      try {
-         const parsed = JSON.parse(underwritersJson);
-         setUnderwritersList(Array.isArray(parsed) ? parsed : []);
-      } catch (error) {
-         console.error('Error parsing underwriters:', error);
-         setUnderwritersList([]);
-      }
-   }, [underwritersJson]);
 
    const fetchCombinedPerformance = async (underwriterIds: number[]) => {
       if (underwriterIds.length === 0) {
