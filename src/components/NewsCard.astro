@@ -49,23 +49,23 @@ const timeAgo = getTimeAgo(published_at || created_at);
 const articleUrl = `/artikel/${slug}`;
 ---
 
-<article class="group bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-  <a href={articleUrl} class="flex gap-6">
-    <div class="flex-shrink-0">
+<article class="group bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
+  <a href={articleUrl} class="flex flex-col sm:flex-row gap-4 sm:gap-6">
+    <div class="flex-shrink-0 w-full sm:w-48">
       {thumbnail_url ? (
         <Image 
           src={thumbnail_url} 
           alt={thumbnail_alt || title || 'Article thumbnail'} 
           width={192}
           height={112}
-          class="w-48 h-28 rounded-lg object-cover" 
+          class="w-full sm:w-48 h-40 sm:h-28 rounded-lg object-cover" 
           loading="lazy"
           format="webp"
           fetchpriority="low"
           sizes="(max-width: 640px) 100vw, 192px"
         />
       ) : (
-        <div class="w-48 h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
+        <div class="w-full sm:w-48 h-40 sm:h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
           <svg class="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -78,9 +78,9 @@ const articleUrl = `/artikel/${slug}`;
       )}
     </div>
     <div class="flex-1 min-w-0">
-      <h3 class="text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">{title}</h3>
+      <h3 class="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight line-clamp-2">{title}</h3>
       <p class="text-sm text-gray-600 mb-3 line-clamp-2">{summary || 'Tidak ada ringkasan tersedia...'}</p>
-      <p class="text-sm text-blue-600 font-medium">
+      <p class="text-xs sm:text-sm text-blue-600 font-medium">
         {categories?.slug ? (
           <>
             <a 

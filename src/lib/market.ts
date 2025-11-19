@@ -17,7 +17,7 @@ async function fetchYahooFinanceData(symbol: string): Promise<MarketData | null>
 
     // Create timeout controller untuk kompatibilitas Node.js versi lama
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout (lebih pendek untuk VPS)
 
     const response = await fetch(url, {
       headers: {
@@ -130,10 +130,11 @@ export async function getMarketData(symbols?: string[]): Promise<MarketData[]> {
   // Dengan timeout yang lebih pendek untuk VPS yang lambat (1.5 detik per symbol)
   const marketDataPromises = symbolsToFetch.map(async ({ symbol, name }) => {
     try {
-      // Coba fetch dari Yahoo Finance dengan shorter timeout untuk cold start
+      // Coba fetch dari Yahoo Finance dengan shorter timeout untuk VPS yang lambat
+      // Timeout lebih pendek (1 detik) untuk faster page load
       const data = await Promise.race([
         fetchYahooFinanceData(symbol),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500)), // 1.5 second timeout (lebih cepat)
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)), // 1 second timeout (lebih agresif)
       ]);
 
       if (data) {

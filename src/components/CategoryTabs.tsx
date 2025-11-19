@@ -41,21 +41,27 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
    useEffect(() => {
       if (!activeCategoryId) return;
 
+      const controller = new AbortController();
+      
       const fetchArticles = async () => {
          setLoading(true);
+         
          try {
-            // Use AbortController untuk cancel request jika component unmount
-            const controller = new AbortController();
             const response = await fetch(`/api/articles?category_id=${activeCategoryId}&status=published&limit=4`, {
                signal: controller.signal,
-               // Prefetch sudah dilakukan, jadi ini akan menggunakan cached response
-               cache: 'default'
+               cache: 'no-store', // Always fetch fresh data
+               headers: {
+                  'Content-Type': 'application/json',
+               },
             });
+            
             if (response.ok) {
                const result = await response.json();
                setArticles(result.data || []);
+            } else {
+               console.error('Failed to fetch articles:', response.status, response.statusText);
+               setArticles([]);
             }
-            return () => controller.abort();
          } catch (error) {
             // Ignore abort errors
             if (error instanceof Error && error.name === 'AbortError') return;
@@ -67,6 +73,11 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
       };
 
       fetchArticles();
+      
+      // Cleanup function
+      return () => {
+         controller.abort();
+      };
    }, [activeCategoryId]);
 
    if (categories.length === 0) {

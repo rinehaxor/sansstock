@@ -593,47 +593,48 @@ export default function UnderwriterComparison({ underwriters: underwritersJson }
                      <h2 className="text-xl font-bold text-gray-900 mb-4">
                         Daftar IPO dari Semua Underwriter ({combinedPerformance.ipo_listings.length})
                      </h2>
-                     <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                           <thead className="bg-gray-50">
-                              <tr>
-                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
-                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Perusahaan</th>
-                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal IPO</th>
-                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga IPO</th>
-                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Underwriter</th>
-                              </tr>
-                           </thead>
-                           <tbody className="bg-white divide-y divide-gray-200">
-                              {combinedPerformance.ipo_listings
-                                 .sort((a, b) => new Date(b.ipo_date).getTime() - new Date(a.ipo_date).getTime())
-                                 .map((ipo) => {
-                                    const underwriters = ipo.underwriters || [];
-                                    const hasMultipleUnderwriters = underwriters.length > 1;
-                                    
-                                    return (
-                                       <tr key={ipo.id} className="hover:bg-gray-50">
-                                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                             {ipo.ticker_symbol}
+                     <div className="overflow-x-auto -mx-4 sm:mx-0">
+                        <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+                           <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                 <tr>
+                                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ticker</th>
+                                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Perusahaan</th>
+                                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tanggal IPO</th>
+                                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Harga IPO</th>
+                                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Underwriter</th>
+                                 </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                 {combinedPerformance.ipo_listings
+                                    .sort((a, b) => new Date(b.ipo_date).getTime() - new Date(a.ipo_date).getTime())
+                                    .map((ipo) => {
+                                       const underwriters = ipo.underwriters || [];
+                                       const hasMultipleUnderwriters = underwriters.length > 1;
+                                       
+                                       return (
+                                          <tr key={ipo.id} className="hover:bg-gray-50">
+                                             <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">
+                                                {ipo.ticker_symbol}
+                                             </td>
+                                             <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 truncate max-w-[150px] sm:max-w-none">{ipo.company_name}</td>
+                                             <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                                                {new Date(ipo.ipo_date).toLocaleDateString('id-ID')}
+                                             </td>
+                                             <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+                                                {ipo.ipo_price ? `Rp ${ipo.ipo_price.toLocaleString('id-ID')}` : '-'}
                                           </td>
-                                          <td className="px-4 py-3 text-sm text-gray-900">{ipo.company_name}</td>
-                                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                             {new Date(ipo.ipo_date).toLocaleDateString('id-ID')}
-                                          </td>
-                                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                             {ipo.ipo_price ? `Rp ${ipo.ipo_price.toLocaleString('id-ID')}` : '-'}
-                                          </td>
-                                          <td className="px-4 py-3 text-sm text-gray-600">
+                                          <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-600">
                                              {underwriters.length === 0 ? (
                                                 <span className="text-gray-400">-</span>
                                              ) : underwriters.length === 1 ? (
-                                                <span>{underwriters[0].name}</span>
+                                                <span className="truncate block max-w-[150px] sm:max-w-none">{underwriters[0].name}</span>
                                              ) : (
-                                                <div className="flex items-center gap-2">
-                                                   <span>{underwriters[0].name}</span>
+                                                <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                                                   <span className="truncate max-w-[100px] sm:max-w-none">{underwriters[0].name}</span>
                                                    <button
                                                       onClick={() => setSelectedIpoForModal(ipo)}
-                                                      className="text-blue-600 hover:text-blue-700 text-xs font-medium underline"
+                                                      className="text-blue-600 hover:text-blue-700 text-[10px] sm:text-xs font-medium underline whitespace-nowrap"
                                                    >
                                                       +{underwriters.length - 1} lainnya
                                                    </button>
@@ -645,6 +646,7 @@ export default function UnderwriterComparison({ underwriters: underwritersJson }
                                  })}
                            </tbody>
                         </table>
+                        </div>
                      </div>
                   </div>
                )}

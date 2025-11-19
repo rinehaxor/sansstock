@@ -5,8 +5,8 @@ import logo from '../assets/logo.png';
 ---
 
 <header class="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-50 transition-all duration-300">
-  <div class="max-w-7xl mx-auto px-4">
-    <div class="flex items-center justify-between h-16">
+  <div class="max-w-7xl mx-auto px-3 sm:px-4">
+    <div class="flex items-center justify-between h-14 sm:h-16">
       <!-- Logo dan Brand -->
       <div class="flex-shrink-0">
         <a href="/" class="flex items-center gap-3 text-gray-900 hover:scale-105 transition-transform duration-200">
@@ -15,8 +15,8 @@ import logo from '../assets/logo.png';
       </div>
 
       <!-- Navigation Menu -->
-      <nav class="hidden md:flex items-center">
-        <ul class="flex space-x-8">
+      <nav class="hidden lg:flex items-center">
+        <ul class="flex space-x-6 xl:space-x-8">
           <li>
             <a href="/" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 relative transition-colors duration-200 after:absolute after:bottom-[-1rem] after:left-0 after:right-0 after:h-0.5 after:bg-gradient-to-r after:from-blue-600 after:to-blue-700 after:rounded-sm">
               Beranda
@@ -61,10 +61,10 @@ import logo from '../assets/logo.png';
       </nav>
 
       <!-- Search dan Actions -->
-      <div class="flex items-center space-x-4">
+      <div class="flex items-center space-x-2 sm:space-x-4">
         <!-- Search Box -->
-        <form action="/search" method="get" class="hidden sm:block relative">
-          <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <form action="/search" method="get" class="hidden md:block relative">
+          <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>
@@ -73,16 +73,16 @@ import logo from '../assets/logo.png';
             name="q"
             id="search-input"
             placeholder="Cari berita..." 
-            class="pl-10 pr-4 py-2 w-48 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
+            class="pl-9 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 w-32 sm:w-40 md:w-48 border border-gray-300 rounded-lg bg-gray-50 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
           >
         </form>
         
 
         <!-- Mobile Menu Toggle -->
-        <button class="md:hidden flex flex-col space-y-1 p-2" aria-label="Toggle mobile menu">
-          <span class="w-6 h-0.5 bg-gray-700 transition-all duration-300"></span>
-          <span class="w-6 h-0.5 bg-gray-700 transition-all duration-300"></span>
-          <span class="w-6 h-0.5 bg-gray-700 transition-all duration-300"></span>
+        <button id="mobile-menu-toggle" type="button" class="lg:hidden flex flex-col space-y-1.5 p-2 -mr-2 rounded-lg hover:bg-gray-100 transition-colors relative z-50 cursor-pointer" aria-label="Toggle mobile menu" aria-expanded="false">
+          <span class="w-5 h-0.5 bg-gray-700 transition-all duration-300 pointer-events-none"></span>
+          <span class="w-5 h-0.5 bg-gray-700 transition-all duration-300 pointer-events-none"></span>
+          <span class="w-5 h-0.5 bg-gray-700 transition-all duration-300 pointer-events-none"></span>
         </button>
       </div>
     </div>
@@ -90,21 +90,21 @@ import logo from '../assets/logo.png';
 </header>
 
 <!-- Mobile Menu -->
-<div class="md:hidden bg-white border-b border-gray-200 hidden" id="mobile-menu">
-  <div class="px-4 py-2 space-y-1">
-    <a href="/" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Beranda</a>
-    <a href="/categories/ekonomi" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Ekonomi</a>
-    <a href="/categories/saham" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Saham</a>
-    <a href="/categories/pasar" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Pasar</a>
-    <a href="/categories/analisis" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Analisis</a>
-    <a href="/categories/kripto" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Kripto</a>
-    <a href="/categories/teknologi" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">Teknologi</a>
-    <a href="/underwriters" class="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md">History Underwriter IPO</a>
+<div class="lg:hidden bg-white border-b border-gray-200 hidden max-h-[calc(100vh-3.5rem)] overflow-y-auto" id="mobile-menu">
+  <div class="px-3 sm:px-4 py-3 space-y-0.5">
+    <a href="/" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm font-medium transition-colors">Beranda</a>
+    <a href="/categories/ekonomi" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm transition-colors">Ekonomi</a>
+    <a href="/categories/saham" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm transition-colors">Saham</a>
+    <a href="/categories/pasar" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm transition-colors">Pasar</a>
+    <a href="/categories/analisis" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm transition-colors">Analisis</a>
+    <a href="/categories/kripto" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm transition-colors">Kripto</a>
+    <a href="/categories/teknologi" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm transition-colors">Teknologi</a>
+    <a href="/underwriters" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm transition-colors">History Underwriter IPO</a>
     
     <!-- Mobile Search -->
-    <div class="px-3 py-2 border-t border-gray-200 mt-2 pt-4">
+    <div class="px-3 py-3 border-t border-gray-200 mt-2 pt-4">
       <form action="/search" method="get" class="relative">
-        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="8"></circle>
           <path d="m21 21-4.35-4.35"></path>
         </svg>
@@ -113,7 +113,7 @@ import logo from '../assets/logo.png';
           name="q"
           id="mobile-search-input"
           placeholder="Cari berita..." 
-          class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
+          class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-200"
         >
       </form>
     </div>
@@ -123,12 +123,44 @@ import logo from '../assets/logo.png';
 <script is:inline>
   // Mobile menu toggle functionality
   document.addEventListener('DOMContentLoaded', function() {
-    const mobileMenuToggle = document.querySelector('[aria-label="Toggle mobile menu"]');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
     const mobileMenu = document.getElementById('mobile-menu');
     
     if (mobileMenuToggle && mobileMenu) {
-      mobileMenuToggle.addEventListener('click', function() {
-        mobileMenu.classList.toggle('hidden');
+      mobileMenuToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const isHidden = mobileMenu.classList.toggle('hidden');
+        mobileMenuToggle.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
+        
+        // Animate hamburger icon
+        const spans = mobileMenuToggle.querySelectorAll('span');
+        if (!isHidden) {
+          spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+          spans[1].style.opacity = '0';
+          spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+        } else {
+          spans[0].style.transform = '';
+          spans[1].style.opacity = '1';
+          spans[2].style.transform = '';
+        }
+      });
+      
+      // Close menu when clicking outside
+      document.addEventListener('click', function(event) {
+        const target = event.target as Node;
+        if (mobileMenuToggle && mobileMenu && 
+            !mobileMenuToggle.contains(target) && 
+            !mobileMenu.contains(target)) {
+          if (!mobileMenu.classList.contains('hidden')) {
+            mobileMenu.classList.add('hidden');
+            mobileMenuToggle.setAttribute('aria-expanded', 'false');
+            const spans = mobileMenuToggle.querySelectorAll('span');
+            spans[0].style.transform = '';
+            spans[1].style.opacity = '1';
+            spans[2].style.transform = '';
+          }
+        }
       });
     }
 

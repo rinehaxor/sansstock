@@ -92,18 +92,19 @@ export default function IPOTableWithModal({ ipoListings }: IPOTableWithModalProp
 
    return (
       <>
-         <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-               <thead className="bg-gray-50">
-                  <tr>
-                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticker</th>
-                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Perusahaan</th>
-                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal IPO</th>
-                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sektor</th>
-                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga IPO</th>
-                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performa</th>
-                  </tr>
-               </thead>
+         <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <div className="inline-block min-w-full align-middle px-4 sm:px-0">
+               <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                     <tr>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ticker</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Perusahaan</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tanggal IPO</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Sektor</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Harga IPO</th>
+                        <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Performa</th>
+                     </tr>
+                  </thead>
                <tbody className="bg-white divide-y divide-gray-200">
                   {parsedListings && Array.isArray(parsedListings) && parsedListings.length > 0 ? (
                      parsedListings.map((ipo) => {
@@ -112,36 +113,36 @@ export default function IPOTableWithModal({ ipoListings }: IPOTableWithModalProp
 
                         return (
                            <tr key={ipo.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-4 py-3 whitespace-nowrap">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
                                  <button
                                     onClick={() => handleTickerClick(ipo)}
-                                    className="font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded-lg px-3 py-1.5 transition-all duration-200 transform hover:scale-105"
+                                    className="font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm transition-all duration-200 transform hover:scale-105"
                                     title={`Klik untuk melihat detail ${ipo.ticker_symbol}`}
                                  >
                                     {ipo.ticker_symbol}
                                  </button>
                               </td>
-                              <td className="px-4 py-3">
-                                 <div className="text-sm font-medium text-gray-900 max-w-xs">{ipo.company_name}</div>
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                 <div className="text-xs sm:text-sm font-medium text-gray-900 max-w-xs truncate">{ipo.company_name}</div>
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                 <div className="text-sm text-gray-900">{formatDate(ipo.ipo_date)}</div>
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                                 <div className="text-xs sm:text-sm text-gray-900">{formatDate(ipo.ipo_date)}</div>
                               </td>
-                              <td className="px-4 py-3">
-                                 <div className="text-sm text-gray-900">{ipo.general_sector || '-'}</div>
-                                 {ipo.specific_sector && <div className="text-xs text-gray-500">{ipo.specific_sector}</div>}
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">
+                                 <div className="text-xs sm:text-sm text-gray-900">{ipo.general_sector || '-'}</div>
+                                 {ipo.specific_sector && <div className="text-[10px] sm:text-xs text-gray-500">{ipo.specific_sector}</div>}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                 <div className="text-sm text-gray-900">{formatCurrency(ipo.ipo_price)}</div>
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap">
+                                 <div className="text-xs sm:text-sm text-gray-900">{formatCurrency(ipo.ipo_price)}</div>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
                                  {latestMetric ? (
-                                    <div className="text-sm">
+                                    <div className="text-xs sm:text-sm">
                                        <div className={`font-semibold ${latestMetric.metric_value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                           {latestMetric.metric_value >= 0 ? '+' : ''}
                                           {latestMetric.metric_value.toFixed(2)}%
                                        </div>
-                                       <div className="text-xs text-gray-500">
+                                       <div className="text-[10px] sm:text-xs text-gray-500">
                                           {latestMetric.period_days === 1
                                              ? 'Hari 1'
                                              : latestMetric.period_days === 7
@@ -154,7 +155,7 @@ export default function IPOTableWithModal({ ipoListings }: IPOTableWithModalProp
                                        </div>
                                     </div>
                                  ) : (
-                                    <span className="text-sm text-gray-400">-</span>
+                                    <span className="text-xs sm:text-sm text-gray-400">-</span>
                                  )}
                               </td>
                            </tr>
@@ -162,13 +163,14 @@ export default function IPOTableWithModal({ ipoListings }: IPOTableWithModalProp
                      })
                   ) : (
                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                           Tidak ada data IPO
+                        <td colSpan={6} className="px-4 py-8 text-center text-xs sm:text-sm text-gray-500">
+                           Tidak ada data IPO yang tersedia.
                         </td>
                      </tr>
                   )}
                </tbody>
             </table>
+            </div>
          </div>
 
          <IPODetailModal ipo={selectedIPO} isOpen={isModalOpen} onClose={handleCloseModal} />

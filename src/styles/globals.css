@@ -123,3 +123,30 @@ body {
 .bg-background {
    background-color: hsl(var(--background));
 }
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+   /* Improve touch targets */
+   button, a {
+      min-height: 44px;
+      min-width: 44px;
+   }
+   
+   /* Better text rendering on mobile */
+   body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+   }
+   
+   /* Prevent horizontal scroll */
+   html, body {
+      overflow-x: hidden;
+      width: 100%;
+   }
+   
+   /* Better scrolling on iOS */
+   * {
+      -webkit-overflow-scrolling: touch;
+   }
+}
