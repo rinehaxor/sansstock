@@ -31,11 +31,23 @@ interface CategoryTabsProps {
 
 export default function CategoryTabs({ categories: categoriesProp, initialCategoryId }: CategoryTabsProps) {
    // Parse categories if it's a JSON string
-   const categories: Category[] = typeof categoriesProp === 'string' ? JSON.parse(categoriesProp) : categoriesProp;
+   let categories: Category[] = [];
+   try {
+      categories = typeof categoriesProp === 'string' ? JSON.parse(categoriesProp) : categoriesProp;
+      // Ensure it's an array
+      if (!Array.isArray(categories)) {
+         console.error('CategoryTabs: categories is not an array', categories);
+         categories = [];
+      }
+   } catch (error) {
+      console.error('CategoryTabs: Error parsing categories', error);
+      categories = [];
+   }
 
    const [activeCategoryId, setActiveCategoryId] = useState<number | null>(initialCategoryId || (categories.length > 0 ? categories[0].id : null));
    const [articles, setArticles] = useState<Article[]>([]);
    const [loading, setLoading] = useState(false);
+   const [error, setError] = useState<string | null>(null);
 
    // Fetch articles for active category
    useEffect(() => {
@@ -58,14 +70,19 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
             if (response.ok) {
                const result = await response.json();
                setArticles(result.data || []);
+               setError(null);
             } else {
-               console.error('Failed to fetch articles:', response.status, response.statusText);
+               const errorMsg = `Failed to fetch articles: ${response.status} ${response.statusText}`;
+               console.error('CategoryTabs:', errorMsg);
+               setError(errorMsg);
                setArticles([]);
             }
          } catch (error) {
             // Ignore abort errors
             if (error instanceof Error && error.name === 'AbortError') return;
-            console.error('Error fetching articles:', error);
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            console.error('CategoryTabs: Error fetching articles:', error);
+            setError(`Error: ${errorMsg}`);
             setArticles([]);
          } finally {
             setLoading(false);
@@ -80,7 +97,20 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
       };
    }, [activeCategoryId]);
 
+   // Debug: Log categories untuk troubleshooting
+   useEffect(() => {
+      if (categories.length === 0) {
+         console.warn('CategoryTabs: No categories available', { categoriesProp, initialCategoryId });
+      } else {
+         console.log('CategoryTabs: Categories loaded', categories.length);
+      }
+   }, [categories.length, categoriesProp, initialCategoryId]);
+
    if (categories.length === 0) {
+      // Return placeholder untuk debugging di production
+      if (typeof window !== 'undefined') {
+         console.warn('CategoryTabs: Rendering null because categories.length === 0');
+      }
       return null;
    }
 
@@ -125,6 +155,11 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
                      categories={article.categories}
                   />
                ))}
+            </div>
+         ) : error ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 sm:p-12 text-center">
+               <p className="text-yellow-800 text-sm sm:text-lg mb-2">Error memuat artikel</p>
+               <p className="text-yellow-600 text-xs sm:text-sm">{error}</p>
             </div>
          ) : (
             <div className="bg-white rounded-xl border border-gray-200 p-8 sm:p-12 text-center">

@@ -11,7 +11,7 @@ Mencegah cold start dengan keep server dan database connection warm.
 ```bash
 cd /var/www/sansstocks/sansstocks
 npm run build
-pm2 restart sansstocks
+pm2 restart astro
 ```
 
 ### 2. Test Warmup Endpoint
@@ -61,12 +61,14 @@ pm2 set pm2-cron:warmup "*/5 * * * * curl -s https://emitenhub.com/api/warmup"
 ## 📊 Expected Results
 
 ### Before:
-- **Cold Start**: 2-3 detik saat pertama kali akses
-- **TTFB**: 2-3 detik
+
+-  **Cold Start**: 2-3 detik saat pertama kali akses
+-  **TTFB**: 2-3 detik
 
 ### After:
-- **Cold Start**: Minimal (server selalu warm)
-- **TTFB**: < 500ms
+
+-  **Cold Start**: Minimal (server selalu warm)
+-  **TTFB**: < 500ms
 
 ## ⚠️ Catatan
 
@@ -90,7 +92,7 @@ sudo systemctl start cron
 
 ```bash
 # Check logs
-pm2 logs sansstocks
+pm2 logs astro
 
 # Test endpoint manually
 curl -v https://emitenhub.com/api/warmup
@@ -99,13 +101,14 @@ curl -v https://emitenhub.com/api/warmup
 ## 📝 Summary
 
 **Setup:**
+
 1. ✅ Warmup endpoint sudah dibuat (`/api/warmup`)
 2. ⚠️ Setup cron job untuk auto warmup setiap 5 menit
 3. ⚠️ Monitor TTFB setelah setup
 
 **Benefits:**
-- Server selalu warm
-- Database connection pool active
-- Faster TTFB untuk users
-- Better user experience
 
+-  Server selalu warm
+-  Database connection pool active
+-  Faster TTFB untuk users
+-  Better user experience

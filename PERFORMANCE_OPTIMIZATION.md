@@ -124,9 +124,9 @@ npm install
 npm run build
 
 # Restart aplikasi
-pm2 restart sansstocks
+pm2 restart astro
 # atau
-sudo systemctl restart sansstocks
+sudo systemctl restart astro
 ```
 
 ### 4. Verify Optimizations

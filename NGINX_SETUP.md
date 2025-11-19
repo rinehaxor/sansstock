@@ -6,13 +6,17 @@
 
 ```bash
 # Backup config yang ada
-sudo cp /etc/nginx/sites-available/sansstocks /etc/nginx/sites-available/sansstocks.backup
+sudo cp /etc/nginx/sites-available/emitenhub /etc/nginx/sites-available/emitenhub.backup
+# atau jika nama file berbeda, cek dulu:
+# ls /etc/nginx/sites-available/
 ```
 
 ### 2. Edit Nginx Config
 
 ```bash
-# Edit nginx config
+# Edit nginx config (sesuaikan nama file dengan yang ada di server)
+sudo nano /etc/nginx/sites-available/emitenhub
+# atau
 sudo nano /etc/nginx/sites-available/sansstocks
 ```
 
@@ -30,7 +34,7 @@ server {
     # ============================================
     # PERFORMANCE OPTIMIZATION
     # ============================================
-    
+
     # Cache headers untuk static assets
     location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|webp|woff|woff2|ttf|eot)$ {
         expires 1y;
@@ -73,6 +77,22 @@ server {
     # END PERFORMANCE OPTIMIZATION
     # ============================================
 
+    # API routes - Jangan di-cache (penting untuk dynamic content)
+    location /api/ {
+        proxy_pass http://localhost:4321;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        # Jangan cache API responses
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+        expires 0;
+    }
+
     # Proxy pass ke Node.js app
     location / {
         proxy_pass http://localhost:4321;
@@ -96,6 +116,7 @@ sudo nginx -t
 ```
 
 **Expected output:**
+
 ```
 nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
 nginx: configuration file /etc/nginx/nginx.conf test is successful
@@ -122,16 +143,18 @@ curl -H "Accept-Encoding: gzip" -I https://emitenhub.com | grep -i content-encod
 ```
 
 **Expected results:**
-- Cache-Control header untuk static assets
-- Content-Encoding: gzip untuk text files
+
+-  Cache-Control header untuk static assets
+-  Content-Encoding: gzip untuk text files
 
 ## 🎯 Expected Improvements
 
 Setelah setup ini:
-- ✅ Static assets cached 1 tahun (tidak perlu download ulang)
-- ✅ Images cached 7 hari
-- ✅ Gzip compression mengurangi transfer size ~70%
-- ✅ Faster page load untuk repeat visitors
+
+-  ✅ Static assets cached 1 tahun (tidak perlu download ulang)
+-  ✅ Images cached 7 hari
+-  ✅ Gzip compression mengurangi transfer size ~70%
+-  ✅ Faster page load untuk repeat visitors
 
 ## 🐛 Troubleshooting
 
@@ -148,7 +171,9 @@ sudo nginx -T | grep -A 5 -B 5 error
 ### Cache tidak bekerja
 
 ```bash
-# Cek apakah location block benar
+# Cek apakah location block benar (sesuaikan nama file)
+sudo grep -A 5 "location ~" /etc/nginx/sites-available/emitenhub
+# atau
 sudo grep -A 5 "location ~" /etc/nginx/sites-available/sansstocks
 
 # Cek nginx error logs
@@ -172,4 +197,3 @@ curl -H "Accept-Encoding: gzip" -I https://emitenhub.com | grep -i content-encod
 2. **Images Cache**: Images di-cache 7 hari dengan stale-while-revalidate, artinya browser bisa serve cached version sambil fetch update di background.
 
 3. **Gzip Compression**: Mengurangi transfer size untuk text files (HTML, CSS, JS) sekitar 70%, sangat membantu untuk VPS dengan bandwidth terbatas.
-

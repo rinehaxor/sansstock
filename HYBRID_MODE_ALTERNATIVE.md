@@ -54,7 +54,7 @@ npm run build
 ### 2. Restart
 
 ```bash
-pm2 restart sansstocks
+pm2 restart astro
 ```
 
 ### 3. Setup Warmup (Penting!)

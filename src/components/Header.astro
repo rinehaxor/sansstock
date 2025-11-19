@@ -8,9 +8,9 @@ import logo from '../assets/logo.png';
   <div class="max-w-7xl mx-auto px-3 sm:px-4">
     <div class="flex items-center justify-between h-14 sm:h-16">
       <!-- Logo dan Brand -->
-      <div class="flex-shrink-0">
-        <a href="/" class="flex items-center gap-3 text-gray-900 hover:scale-105 transition-transform duration-200">
-          <Image src={logo} alt="EmitenHub Logo" width={300} height={60} format="webp" class="object-contain h-44 w-auto" />
+      <div class="flex-shrink-0 z-10">
+        <a href="/" class="flex items-center gap-2 sm:gap-3 text-gray-900 hover:scale-105 transition-transform duration-200">
+          <Image src={logo} alt="EmitenHub Logo" width={300} height={60} format="webp" class="object-contain h-8 sm:h-10 md:h-12 w-auto max-h-12" />
         </a>
       </div>
 
@@ -79,18 +79,32 @@ import logo from '../assets/logo.png';
         
 
         <!-- Mobile Menu Toggle -->
-        <button id="mobile-menu-toggle" type="button" class="lg:hidden flex flex-col space-y-1.5 p-2 -mr-2 rounded-lg hover:bg-gray-100 transition-colors relative z-50 cursor-pointer" aria-label="Toggle mobile menu" aria-expanded="false">
-          <span class="w-5 h-0.5 bg-gray-700 transition-all duration-300 pointer-events-none"></span>
-          <span class="w-5 h-0.5 bg-gray-700 transition-all duration-300 pointer-events-none"></span>
-          <span class="w-5 h-0.5 bg-gray-700 transition-all duration-300 pointer-events-none"></span>
+        <button 
+          id="mobile-menu-toggle" 
+          type="button" 
+          class="lg:hidden relative z-[60] inline-flex items-center justify-center p-2.5 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-all duration-200 min-w-[44px] min-h-[44px]"
+          aria-label="Toggle mobile menu" 
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span class="sr-only">Open main menu</span>
+          <!-- Hamburger Icon -->
+          <div class="w-6 h-6 flex flex-col justify-center items-center space-y-1.5">
+            <span id="hamburger-line-1" class="block w-5 h-0.5 bg-current transform transition-all duration-300 ease-in-out"></span>
+            <span id="hamburger-line-2" class="block w-5 h-0.5 bg-current transform transition-all duration-300 ease-in-out"></span>
+            <span id="hamburger-line-3" class="block w-5 h-0.5 bg-current transform transition-all duration-300 ease-in-out"></span>
+          </div>
         </button>
       </div>
     </div>
   </div>
 </header>
 
+<!-- Mobile Menu Overlay -->
+<div id="mobile-menu-overlay" class="lg:hidden fixed top-14 sm:top-16 left-0 right-0 bottom-0 bg-black/50 z-[55] hidden transition-opacity duration-300"></div>
+
 <!-- Mobile Menu -->
-<div class="lg:hidden bg-white border-b border-gray-200 hidden max-h-[calc(100vh-3.5rem)] overflow-y-auto" id="mobile-menu">
+<div class="lg:hidden fixed top-14 sm:top-16 left-0 right-0 bg-white border-b border-gray-200 hidden max-h-[calc(100vh-3.5rem)] overflow-y-auto z-[55] shadow-lg" id="mobile-menu">
   <div class="px-3 sm:px-4 py-3 space-y-0.5">
     <a href="/" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm font-medium transition-colors">Beranda</a>
     <a href="/categories/ekonomi" class="block px-3 py-2.5 text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-md text-sm transition-colors">Ekonomi</a>
@@ -122,80 +136,147 @@ import logo from '../assets/logo.png';
 
 <script is:inline>
   // Mobile menu toggle functionality
-  document.addEventListener('DOMContentLoaded', function() {
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
-    const mobileMenu = document.getElementById('mobile-menu');
+  (function() {
+    'use strict';
     
-    if (mobileMenuToggle && mobileMenu) {
+    function initMobileMenu() {
+      const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+      const line1 = document.getElementById('hamburger-line-1');
+      const line2 = document.getElementById('hamburger-line-2');
+      const line3 = document.getElementById('hamburger-line-3');
+      
+      if (!mobileMenuToggle || !mobileMenu || !mobileMenuOverlay) {
+        console.warn('Mobile menu elements not found');
+        return;
+      }
+      
+      function openMenu() {
+        mobileMenu.classList.remove('hidden');
+        mobileMenuOverlay.classList.remove('hidden');
+        mobileMenuToggle.setAttribute('aria-expanded', 'true');
+        document.body.style.overflow = 'hidden';
+        
+        // Animate hamburger to X
+        if (line1 && line2 && line3) {
+          line1.style.transform = 'rotate(45deg) translate(5px, 5px)';
+          line1.style.transformOrigin = 'center';
+          line2.style.opacity = '0';
+          line3.style.transform = 'rotate(-45deg) translate(7px, -6px)';
+          line3.style.transformOrigin = 'center';
+        }
+      }
+      
+      function closeMenu() {
+        mobileMenu.classList.add('hidden');
+        mobileMenuOverlay.classList.add('hidden');
+        mobileMenuToggle.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+        
+        // Animate X back to hamburger
+        if (line1 && line2 && line3) {
+          line1.style.transform = '';
+          line2.style.opacity = '1';
+          line3.style.transform = '';
+        }
+      }
+      
+      function toggleMenu() {
+        const isOpen = !mobileMenu.classList.contains('hidden');
+        if (isOpen) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
+      }
+      
+      // Toggle button click
       mobileMenuToggle.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        const isHidden = mobileMenu.classList.toggle('hidden');
-        mobileMenuToggle.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
-        
-        // Animate hamburger icon
-        const spans = mobileMenuToggle.querySelectorAll('span');
-        if (!isHidden) {
-          spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-          spans[1].style.opacity = '0';
-          spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
-        } else {
-          spans[0].style.transform = '';
-          spans[1].style.opacity = '1';
-          spans[2].style.transform = '';
-        }
+        toggleMenu();
       });
       
-      // Close menu when clicking outside
-      document.addEventListener('click', function(event) {
-        const target = event.target as Node;
-        if (mobileMenuToggle && mobileMenu && 
-            !mobileMenuToggle.contains(target) && 
-            !mobileMenu.contains(target)) {
-          if (!mobileMenu.classList.contains('hidden')) {
-            mobileMenu.classList.add('hidden');
-            mobileMenuToggle.setAttribute('aria-expanded', 'false');
-            const spans = mobileMenuToggle.querySelectorAll('span');
-            spans[0].style.transform = '';
-            spans[1].style.opacity = '1';
-            spans[2].style.transform = '';
-          }
+      // Overlay click to close
+      mobileMenuOverlay.addEventListener('click', function(e) {
+        e.preventDefault();
+        closeMenu();
+      });
+      
+      // Close on menu link click
+      const menuLinks = mobileMenu.querySelectorAll('a');
+      menuLinks.forEach(link => {
+        link.addEventListener('click', function() {
+          closeMenu();
+        });
+      });
+      
+      // Close on escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !mobileMenu.classList.contains('hidden')) {
+          closeMenu();
         }
       });
     }
-
-    // Search form submit with Enter key
-    const searchInput = document.getElementById('search-input');
-    const mobileSearchInput = document.getElementById('mobile-search-input');
     
-    if (searchInput) {
-      searchInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && this.value.trim()) {
-          this.closest('form')?.submit();
-        }
-      });
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMobileMenu);
+    } else {
+      initMobileMenu();
     }
+  })();
+  
+  // Search form submit with Enter key
+  (function() {
+    'use strict';
+    
+    function initSearch() {
+      const searchInput = document.getElementById('search-input');
+      const mobileSearchInput = document.getElementById('mobile-search-input');
+      
+      if (searchInput) {
+        searchInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && this.value.trim()) {
+            this.closest('form')?.submit();
+          }
+        });
+      }
 
-    if (mobileSearchInput) {
-      mobileSearchInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && this.value.trim()) {
-          this.closest('form')?.submit();
-        }
-      });
+      if (mobileSearchInput) {
+        mobileSearchInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' && this.value.trim()) {
+            this.closest('form')?.submit();
+          }
+        });
+      }
     }
-
+    
     // Prefetch links on hover untuk faster navigation
-    const links = document.querySelectorAll('a[href^="/"]');
-    links.forEach(link => {
-      link.addEventListener('mouseenter', function() {
-        const href = this.getAttribute('href');
-        if (href && !document.querySelector(`link[rel="prefetch"][href="${href}"]`)) {
-          const prefetchLink = document.createElement('link');
-          prefetchLink.rel = 'prefetch';
-          prefetchLink.href = href;
-          document.head.appendChild(prefetchLink);
-        }
-      }, { once: true });
-    });
-  });
+    function initPrefetch() {
+      const links = document.querySelectorAll('a[href^="/"]');
+      links.forEach(link => {
+        link.addEventListener('mouseenter', function() {
+          const href = this.getAttribute('href');
+          if (href && !document.querySelector(`link[rel="prefetch"][href="${href}"]`)) {
+            const prefetchLink = document.createElement('link');
+            prefetchLink.rel = 'prefetch';
+            prefetchLink.href = href;
+            document.head.appendChild(prefetchLink);
+          }
+        }, { once: true });
+      });
+    }
+    
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        initSearch();
+        initPrefetch();
+      });
+    } else {
+      initSearch();
+      initPrefetch();
+    }
+  })();
 </script>
