@@ -147,10 +147,9 @@ const underwritersList = underwritersWithStats;
 		</div>
 
 		<!-- Comparison Component -->
-		<UnderwriterComparison 
-			client:load
-			underwriters={JSON.stringify(underwritersList)}
-		/>
+        <UnderwriterComparison 
+        underwriters={underwritersList}
+      />
 	</div>
 </Layout>
 
