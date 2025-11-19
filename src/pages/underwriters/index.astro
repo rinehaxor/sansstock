@@ -31,9 +31,22 @@ const { data: underwriters, error } = await supabase
   `)
   .order('name', { ascending: true });
 
+// Log error if any
+if (error) {
+  console.error('Error fetching underwriters:', error);
+  console.error('Error details:', JSON.stringify(error, null, 2));
+}
+
+// Log data for debugging
+if (underwriters) {
+  console.log(`Fetched ${underwriters.length} underwriters from database`);
+} else {
+  console.warn('No underwriters data returned from query');
+}
+
 // Calculate performance stats for each underwriter
 let underwritersWithStats = [];
-if (underwriters) {
+if (underwriters && underwriters.length > 0) {
   underwritersWithStats = underwriters.map((underwriter: any) => {
     const ipoUnderwriters = underwriter.ipo_underwriters || [];
     const ipoListings = ipoUnderwriters.map((item: any) => item.ipo_listing).filter((item: any) => item !== null);
@@ -80,10 +93,28 @@ if (underwriters) {
       ipo_listings: sortedIpoListings,
     };
   }).filter((u: any) => u.total_ipos > 0); // Only show underwriters with IPOs
+  
+  console.log(`After filtering, ${underwritersWithStats.length} underwriters have IPOs`);
+} else {
+  console.warn('No underwriters data to process');
 }
 
 // Sort by total IPOs descending by default
 underwritersWithStats.sort((a: any, b: any) => b.total_ipos - a.total_ipos);
+
+// Calculate totals for display
+const totalIPOs = underwritersWithStats.reduce((sum: number, uw: any) => sum + uw.total_ipos, 0);
+const avgIPOsPerUnderwriter = underwritersWithStats.length > 0 
+  ? Math.round(totalIPOs / underwritersWithStats.length)
+  : 0;
+
+// Log final stats
+console.log('Final underwritersWithStats:', {
+  count: underwritersWithStats.length,
+  totalIPOs: totalIPOs,
+  avgIPOsPerUnderwriter: avgIPOsPerUnderwriter,
+  sample: underwritersWithStats.slice(0, 3).map((u: any) => ({ id: u.id, name: u.name, total_ipos: u.total_ipos }))
+});
 ---
 
 <Layout 
@@ -99,46 +130,44 @@ underwritersWithStats.sort((a: any, b: any) => b.total_ipos - a.total_ipos);
 				<span>/</span>
 				<span>Underwriter IPO</span>
 			</div>
-			<div class="flex items-start justify-between gap-4 mb-3">
+			<div class="flex flex-col sm:flex-row items-start sm:items-start justify-between gap-4 mb-3">
 				<div class="flex-1">
-					<h1 class="text-4xl font-bold text-gray-900 mb-3">History Underwriter IPO</h1>
-					<p class="text-lg text-gray-600 max-w-3xl">
+					<h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 sm:mb-3">History Underwriter IPO</h1>
+					<p class="text-sm sm:text-base lg:text-lg text-gray-600 max-w-3xl">
 						Analisis lengkap history dan performa IPO yang ditangani oleh berbagai underwriter di Bursa Efek Indonesia (BEI/IHSG). 
 						Lihat track record, rata-rata performa, dan daftar IPO yang pernah ditangani.
 					</p>
 				</div>
 				<a 
 					href="/underwriters/analisis" 
-					class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 whitespace-nowrap"
+					class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2 whitespace-nowrap w-full sm:w-auto"
 				>
 					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
 					</svg>
-					Analisis Kombinasi
+					Analisis Underwriter IPO
 				</a>
 			</div>
 		</div>
 
 		<!-- Stats Summary -->
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-			<div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-				<div class="text-sm font-medium text-blue-700 mb-1">Total Underwriter</div>
-				<div class="text-3xl font-bold text-blue-900">{underwritersWithStats.length}</div>
+		<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+			<div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 sm:p-6 border border-blue-200">
+				<div class="text-xs sm:text-sm font-medium text-blue-700 mb-1">Total Underwriter</div>
+				<div class="text-2xl sm:text-3xl font-bold text-blue-900">{underwritersWithStats.length}</div>
 				<div class="text-xs text-blue-600 mt-1">Dengan history IPO</div>
 			</div>
-			<div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-				<div class="text-sm font-medium text-green-700 mb-1">Total IPO</div>
-				<div class="text-3xl font-bold text-green-900">
-					{underwritersWithStats.reduce((sum: number, uw: any) => sum + uw.total_ipos, 0)}
+			<div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 sm:p-6 border border-green-200">
+				<div class="text-xs sm:text-sm font-medium text-green-700 mb-1">Total IPO</div>
+				<div class="text-2xl sm:text-3xl font-bold text-green-900">
+					{totalIPOs}
 				</div>
 				<div class="text-xs text-green-600 mt-1">Seluruh IPO yang ditangani</div>
 			</div>
-			<div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-				<div class="text-sm font-medium text-purple-700 mb-1">Rata-rata IPO/Underwriter</div>
-				<div class="text-3xl font-bold text-purple-900">
-					{underwritersWithStats.length > 0 
-						? Math.round(underwritersWithStats.reduce((sum: number, uw: any) => sum + uw.total_ipos, 0) / underwritersWithStats.length)
-						: 0}
+			<div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 sm:p-6 border border-purple-200 sm:col-span-2 md:col-span-1">
+				<div class="text-xs sm:text-sm font-medium text-purple-700 mb-1">Rata-rata IPO/Underwriter</div>
+				<div class="text-2xl sm:text-3xl font-bold text-purple-900">
+					{avgIPOsPerUnderwriter}
 				</div>
 				<div class="text-xs text-purple-600 mt-1">Per underwriter</div>
 			</div>

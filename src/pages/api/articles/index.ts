@@ -79,7 +79,25 @@ export const GET: APIRoute = async ({ request, url }) => {
 
       // Filter by category
       if (categoryId) {
-         query = query.eq('category_id', categoryId);
+         const categoryIdNum = parseInt(categoryId);
+         if (isNaN(categoryIdNum)) {
+            console.error('GET /api/articles - Invalid category_id:', categoryId);
+            return new Response(
+               JSON.stringify({
+                  data: [],
+                  total: 0,
+                  page,
+                  limit,
+                  totalPages: 0,
+                  error: 'Invalid category_id',
+               }),
+               {
+                  status: 400,
+                  headers: { 'Content-Type': 'application/json' },
+               }
+            );
+         }
+         query = query.eq('category_id', categoryIdNum);
       }
 
       // Filter by tag (using article_ids from article_tags)
@@ -101,14 +119,23 @@ export const GET: APIRoute = async ({ request, url }) => {
       const { data, error, count } = await query;
 
       if (error) {
+         console.error('GET /api/articles - Query error:', error);
          return createErrorResponse(error, 500, 'GET /api/articles');
+      }
+      
+      // Debug logging untuk production
+      if (categoryId) {
+         console.log(`GET /api/articles - Category ${categoryId}: Found ${data?.length || 0} articles`);
       }
 
       // Get total count for pagination - build count query with same filters
       let countQuery = supabase.from('articles').select('*', { count: 'exact', head: true }).eq('status', status);
       
       if (categoryId) {
-         countQuery = countQuery.eq('category_id', categoryId);
+         const categoryIdNum = parseInt(categoryId);
+         if (!isNaN(categoryIdNum)) {
+            countQuery = countQuery.eq('category_id', categoryIdNum);
+         }
       }
       
       if (tagId && articleIds && articleIds.length > 0) {

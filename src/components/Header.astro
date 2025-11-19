@@ -8,9 +8,9 @@ import logo from '../assets/logo.png';
   <div class="max-w-7xl mx-auto px-3 sm:px-4">
     <div class="flex items-center justify-between h-14 sm:h-16">
       <!-- Logo dan Brand -->
-      <div class="flex-shrink-0 z-10">
+      <div class="flex-shrink-0 z-10 flex-1 lg:flex-none flex justify-center lg:justify-start">
         <a href="/" class="flex items-center gap-2 sm:gap-3 text-gray-900 hover:scale-105 transition-transform duration-200">
-          <Image src={logo} alt="EmitenHub Logo" width={300} height={60} format="webp" class="object-contain h-8 sm:h-10 md:h-12 w-auto max-h-12" />
+          <Image src={logo} alt="EmitenHub Logo" width={300} height={60} format="webp" class="object-contain h-44" />
         </a>
       </div>
 
@@ -259,11 +259,23 @@ import logo from '../assets/logo.png';
       links.forEach(link => {
         link.addEventListener('mouseenter', function() {
           const href = this.getAttribute('href');
-          if (href && !document.querySelector(`link[rel="prefetch"][href="${href}"]`)) {
+          // Skip prefetch untuk link yang tidak valid atau external
+          if (!href || href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+            return;
+          }
+          // Skip jika sudah ada prefetch link
+          if (document.querySelector(`link[rel="prefetch"][href="${href}"]`)) {
+            return;
+          }
+          // Prefetch hanya untuk internal links
+          try {
             const prefetchLink = document.createElement('link');
             prefetchLink.rel = 'prefetch';
             prefetchLink.href = href;
             document.head.appendChild(prefetchLink);
+          } catch (e) {
+            // Silently fail jika ada error
+            console.debug('Prefetch failed for:', href);
           }
         }, { once: true });
       });

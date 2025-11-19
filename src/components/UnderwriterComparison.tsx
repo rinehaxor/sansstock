@@ -398,12 +398,12 @@ export default function UnderwriterComparison({ underwriters: underwritersJson }
    return (
       <div className="space-y-6">
          {/* Underwriter Selection */}
-         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-               <h2 className="text-xl font-bold text-gray-900">Pilih Underwriter</h2>
+         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4">
+               <h2 className="text-lg sm:text-xl font-bold text-gray-900">Pilih Underwriter</h2>
                <button
                   onClick={addUnderwriterSlot}
-                  className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-2"
+                  className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center justify-center gap-2"
                   disabled={loading}
                >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -413,58 +413,62 @@ export default function UnderwriterComparison({ underwriters: underwritersJson }
                </button>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
                {Array.from({ length: numberOfSlots }).map((_, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                     <label className="w-32 text-sm font-medium text-gray-700">
+                  <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                     <label className="w-full sm:w-32 text-sm font-medium text-gray-700 flex-shrink-0">
                         Underwriter {index + 1}:
                      </label>
-                     <select
-                        value={selectedUnderwriters[index] || ''}
-                        onChange={(e) => handleUnderwriterChange(index, e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        disabled={loading}
-                     >
-                        <option value="">-- Pilih Underwriter --</option>
-                        {underwritersList
-                           .filter(uw => !selectedUnderwriters.includes(uw.id) || selectedUnderwriters[index] === uw.id)
-                           .map((uw) => (
-                              <option key={uw.id} value={uw.id}>
-                                 {uw.name}
-                              </option>
-                           ))}
-                     </select>
-                     {selectedUnderwriters[index] ? (
-                        <button
-                           onClick={() => removeUnderwriter(index)}
-                           className="px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                           title="Hapus underwriter ini"
+                     <div className="flex-1 flex items-stretch sm:items-center gap-2 min-w-0">
+                        <select
+                           value={selectedUnderwriters[index] || ''}
+                           onChange={(e) => handleUnderwriterChange(index, e.target.value)}
+                           className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                           disabled={loading}
                         >
-                           Hapus
-                        </button>
-                     ) : numberOfSlots > 1 ? (
-                        <button
-                           onClick={() => removeUnderwriterSlot(index)}
-                           className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                           title="Hapus slot ini"
-                        >
-                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                           </svg>
-                        </button>
-                     ) : null}
+                           <option value="">-- Pilih Underwriter --</option>
+                           {underwritersList
+                              .filter(uw => !selectedUnderwriters.includes(uw.id) || selectedUnderwriters[index] === uw.id)
+                              .map((uw) => (
+                                 <option key={uw.id} value={uw.id}>
+                                    {uw.name}
+                                 </option>
+                              ))}
+                        </select>
+                        {selectedUnderwriters[index] ? (
+                           <button
+                              onClick={() => removeUnderwriter(index)}
+                              className="px-3 sm:px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors whitespace-nowrap flex-shrink-0 shadow-sm min-w-[70px]"
+                              title="Hapus underwriter ini"
+                           >
+                              Hapus
+                           </button>
+                        ) : numberOfSlots > 1 ? (
+                           <button
+                              onClick={() => removeUnderwriterSlot(index)}
+                              className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 border border-gray-300 min-w-[44px] flex items-center justify-center"
+                              title="Hapus slot ini"
+                           >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                           </button>
+                        ) : null}
+                     </div>
                   </div>
                ))}
             </div>
 
             {selectedUnderwriters.length > 0 && (
                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
+                  <p className="text-xs sm:text-sm text-blue-800">
                      <strong>Underwriter yang dipilih:</strong>{' '}
-                     {selectedUnderwriters.map((id) => {
-                        const uw = underwritersList.find(u => u.id === id);
-                        return uw?.name;
-                     }).filter(Boolean).join(', ')}
+                     <span className="block sm:inline mt-1 sm:mt-0">
+                        {selectedUnderwriters.map((id) => {
+                           const uw = underwritersList.find(u => u.id === id);
+                           return uw?.name;
+                        }).filter(Boolean).join(', ')}
+                     </span>
                   </p>
                </div>
             )}

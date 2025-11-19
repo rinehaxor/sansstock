@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import NewsCard from './NewsCardWrapper';
 
@@ -36,11 +38,9 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
       categories = typeof categoriesProp === 'string' ? JSON.parse(categoriesProp) : categoriesProp;
       // Ensure it's an array
       if (!Array.isArray(categories)) {
-         console.error('CategoryTabs: categories is not an array', categories);
          categories = [];
       }
    } catch (error) {
-      console.error('CategoryTabs: Error parsing categories', error);
       categories = [];
    }
 
@@ -57,32 +57,56 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
       
       const fetchArticles = async () => {
          setLoading(true);
+         setError(null);
          
          try {
-            const response = await fetch(`/api/articles?category_id=${activeCategoryId}&status=published&limit=4`, {
+            const apiUrl = `/api/articles?category_id=${activeCategoryId}&status=published&limit=4`;
+            
+            const response = await fetch(apiUrl, {
                signal: controller.signal,
                cache: 'no-store', // Always fetch fresh data
                headers: {
                   'Content-Type': 'application/json',
+                  'Accept': 'application/json',
                },
             });
             
-            if (response.ok) {
-               const result = await response.json();
-               setArticles(result.data || []);
+            if (!response.ok) {
+               // Try to get error message from response
+               let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+               try {
+                  const errorData = await response.json();
+                  errorMessage = errorData.error || errorData.message || errorMessage;
+               } catch {
+                  // If response is not JSON, use status text
+               }
+               
+               setError(errorMessage);
+               setArticles([]);
+               setLoading(false);
+               return;
+            }
+            
+            const result = await response.json();
+            
+            // Handle different response formats
+            const articlesData = result.data || result.articles || [];
+            
+            if (Array.isArray(articlesData)) {
+               setArticles(articlesData);
                setError(null);
             } else {
-               const errorMsg = `Failed to fetch articles: ${response.status} ${response.statusText}`;
-               console.error('CategoryTabs:', errorMsg);
-               setError(errorMsg);
+               setError('Invalid response format from server');
                setArticles([]);
             }
          } catch (error) {
             // Ignore abort errors
-            if (error instanceof Error && error.name === 'AbortError') return;
+            if (error instanceof Error && error.name === 'AbortError') {
+               return;
+            }
+            
             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-            console.error('CategoryTabs: Error fetching articles:', error);
-            setError(`Error: ${errorMsg}`);
+            setError(`Network error: ${errorMsg}`);
             setArticles([]);
          } finally {
             setLoading(false);
@@ -97,20 +121,7 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
       };
    }, [activeCategoryId]);
 
-   // Debug: Log categories untuk troubleshooting
-   useEffect(() => {
-      if (categories.length === 0) {
-         console.warn('CategoryTabs: No categories available', { categoriesProp, initialCategoryId });
-      } else {
-         console.log('CategoryTabs: Categories loaded', categories.length);
-      }
-   }, [categories.length, categoriesProp, initialCategoryId]);
-
    if (categories.length === 0) {
-      // Return placeholder untuk debugging di production
-      if (typeof window !== 'undefined') {
-         console.warn('CategoryTabs: Rendering null because categories.length === 0');
-      }
       return null;
    }
 
