@@ -5,6 +5,9 @@ import { useState, useMemo } from 'react';
 interface Underwriter {
    id: number;
    name: string;
+   total_ipos: number;
+   performance_by_period: Record<number, { avg: number; min: number; max: number; count: number }>;
+   ipo_listings: IPOListing[];
 }
 
 interface PerformanceMetric {
@@ -38,7 +41,7 @@ interface CombinedPerformance {
 }
 
 interface UnderwriterComparisonProps {
-   underwriters: string; // JSON string from Astro
+   underwriters: string; // JSON string from Astro with detailed stats
 }
 
 function getPeriodLabel(periodDays: number): string {
@@ -107,7 +110,7 @@ export default function UnderwriterComparison({ underwriters: underwritersJson }
    const [error, setError] = useState<string | null>(null);
    const [selectedIpoForModal, setSelectedIpoForModal] = useState<IPOListing | null>(null);
 
-   const fetchCombinedPerformance = async (underwriterIds: number[]) => {
+   const calculateCombinedPerformance = (underwriterIds: number[]) => {
       if (underwriterIds.length === 0) {
          setCombinedPerformance(null);
          return;
@@ -117,165 +120,85 @@ export default function UnderwriterComparison({ underwriters: underwritersJson }
       setError(null);
 
       try {
-         // Fetch all IPOs for each underwriter
-         const ipoPromises = underwriterIds.map(async (id) => {
-            const response = await fetch(`/api/underwriters/${id}?include_ipos=true`);
-            if (!response.ok) {
-               const errorData = await response.json().catch(() => ({}));
-               throw new Error(errorData.error || 'Failed to fetch underwriter data');
-            }
-            const result = await response.json();
-            return result.data;
-         });
+         const selectedUnderwritersData = underwriterIds
+            .map((id) => underwritersList.find((uw) => uw.id === id))
+            .filter((uw): uw is Underwriter => Boolean(uw));
 
-         const underwriterData = await Promise.all(ipoPromises);
+         if (selectedUnderwritersData.length === 0) {
+            setCombinedPerformance(null);
+            setLoading(false);
+            return;
+         }
 
-         // Calculate average performance for each underwriter by period
-         const performanceByUnderwriter: Array<Record<number, number>> = [];
-         const allIpoListings: IPOListing[] = [];
-         const ipoUnderwriterMap = new Map<number, Array<{ id: number; name: string }>>();
+         const combinedPerformanceByPeriod: Record<
+            number,
+            { avg: number; min: number; max: number; count: number }
+         > = {};
 
-         underwriterData.forEach((uw: any) => {
-            const ipoUnderwriters = uw.ipo_underwriters || [];
-            const ipoListings = ipoUnderwriters
-               .map((item: any) => item.ipo_listing)
-               .filter((item: any) => item !== null);
-            
-            // Collect all IPO listings and map underwriters
-            ipoListings.forEach((ipo: any) => {
-               if (ipo && ipo.id) {
-                  if (!ipoUnderwriterMap.has(ipo.id)) {
-                     ipoUnderwriterMap.set(ipo.id, []);
-                  }
-                  // Add this underwriter to the IPO's underwriter list
-                  const existing = ipoUnderwriterMap.get(ipo.id)!;
-                  if (!existing.find(u => u.id === uw.id)) {
-                     existing.push({ id: uw.id, name: uw.name });
-                  }
-               }
-            });
-            
-            allIpoListings.push(...ipoListings);
-
-            // Calculate average performance for this underwriter
-            const allMetrics: PerformanceMetric[] = [];
-            ipoListings.forEach((ipo: IPOListing) => {
-               const metrics = ipo.ipo_performance_metrics || [];
-               allMetrics.push(...metrics);
-            });
-
-            // Group metrics by period_days
-            const metricsByPeriod: Record<number, number[]> = {};
-            allMetrics.forEach((metric) => {
-               if (metric.period_days && metric.metric_value !== null) {
-                  if (!metricsByPeriod[metric.period_days]) {
-                     metricsByPeriod[metric.period_days] = [];
-                  }
-                  metricsByPeriod[metric.period_days].push(metric.metric_value);
-               }
-            });
-
-            // Calculate average for each period for this underwriter
-            const avgByPeriod: Record<number, number> = {};
-            Object.keys(metricsByPeriod).forEach((period) => {
-               const values = metricsByPeriod[parseInt(period)];
-               const avg = values.reduce((a, b) => a + b, 0) / values.length;
-               avgByPeriod[parseInt(period)] = parseFloat(avg.toFixed(2));
-            });
-
-            performanceByUnderwriter.push(avgByPeriod);
-         });
-
-         // Combine performances: average of averages
-         // Get all unique periods from all underwriters
          const allPeriods = new Set<number>();
-         performanceByUnderwriter.forEach((perf) => {
-            Object.keys(perf).forEach((period) => allPeriods.add(parseInt(period)));
+         selectedUnderwritersData.forEach((uw) => {
+            Object.keys(uw.performance_by_period).forEach((period) => allPeriods.add(parseInt(period)));
          });
 
-         // Calculate combined average: (avg1 + avg2 + ...) / count
-         const combinedPerformanceByPeriod: Record<number, { avg: number; min: number; max: number; count: number }> = {};
-         
          allPeriods.forEach((period) => {
-            const averages: number[] = [];
-            const allValues: number[] = [];
+            const perfs = selectedUnderwritersData
+               .map((uw) => uw.performance_by_period[period])
+               .filter((perf) => perf !== undefined);
 
-            // Get average for each underwriter for this period
-            performanceByUnderwriter.forEach((perf) => {
-               if (perf[period] !== undefined) {
-                  averages.push(perf[period]);
-               }
-            });
+            if (perfs.length === 0) return;
 
-            // Get all individual values for min/max calculation
-            underwriterData.forEach((uw: any) => {
-               const ipoUnderwriters = uw.ipo_underwriters || [];
-               ipoUnderwriters.forEach((item: any) => {
-                  const metrics = item.ipo_listing?.ipo_performance_metrics || [];
-                  metrics.forEach((metric: PerformanceMetric) => {
-                     if (metric.period_days === period && metric.metric_value !== null) {
-                        allValues.push(metric.metric_value);
+            const avg = perfs.reduce((sum, perf) => sum + perf.avg, 0) / perfs.length;
+            const min = Math.min(...perfs.map((perf) => perf.min));
+            const max = Math.max(...perfs.map((perf) => perf.max));
+            const count = perfs.reduce((sum, perf) => sum + perf.count, 0);
+
+            combinedPerformanceByPeriod[period] = {
+               avg: parseFloat(avg.toFixed(2)),
+               min,
+               max,
+               count,
+            };
+         });
+
+         // Combine IPO listings
+         const ipoMap = new Map<number, IPOListing>();
+         selectedUnderwritersData.forEach((uw) => {
+            uw.ipo_listings.forEach((ipo) => {
+               if (!ipo || !ipo.id) return;
+
+               if (!ipoMap.has(ipo.id)) {
+                  ipoMap.set(ipo.id, {
+                     ...ipo,
+                     underwriters: ipo.underwriters ? [...ipo.underwriters] : [],
+                  });
+               } else {
+                  const existing = ipoMap.get(ipo.id)!;
+                  const existingUnderwriters = existing.underwriters || [];
+                  const newUnderwriters = ipo.underwriters || [];
+                  const merged = [...existingUnderwriters];
+
+                  newUnderwriters.forEach((uwData) => {
+                     if (!merged.find((item) => item.id === uwData.id)) {
+                        merged.push(uwData);
                      }
                   });
-               });
+
+                  existing.underwriters = merged;
+               }
             });
-
-            if (averages.length > 0) {
-               // Combined average = average of individual underwriter averages
-               const combinedAvg = averages.reduce((a, b) => a + b, 0) / averages.length;
-               
-               combinedPerformanceByPeriod[period] = {
-                  avg: parseFloat(combinedAvg.toFixed(2)),
-                  min: allValues.length > 0 ? Math.min(...allValues) : 0,
-                  max: allValues.length > 0 ? Math.max(...allValues) : 0,
-                  count: allValues.length,
-               };
-            }
          });
-
-         // Get unique IPO IDs
-         const uniqueIpoIds = Array.from(new Set(allIpoListings.map((ipo) => ipo.id).filter(Boolean)));
-         
-         // Fetch complete IPO data with all underwriters
-         let completeIpoListings: IPOListing[] = [];
-         if (uniqueIpoIds.length > 0) {
-            const ipoIdsString = uniqueIpoIds.join(',');
-            const ipoResponse = await fetch(`/api/ipo-listings?ids=${ipoIdsString}`);
-            if (ipoResponse.ok) {
-               const ipoResult = await ipoResponse.json();
-               completeIpoListings = (ipoResult.data || []).map((ipo: any) => ({
-                  id: ipo.id,
-                  ticker_symbol: ipo.ticker_symbol,
-                  company_name: ipo.company_name,
-                  ipo_date: ipo.ipo_date,
-                  ipo_price: ipo.ipo_price,
-                  ipo_performance_metrics: ipo.ipo_performance_metrics || [],
-                  underwriters: (ipo.ipo_underwriters || [])
-                     .map((item: any) => item.underwriter)
-                     .filter((uw: any) => uw && uw.id && uw.name)
-                     .map((uw: any) => ({ id: uw.id, name: uw.name }))
-               }));
-            }
-         }
-         
-         // Fallback to original data if fetch failed
-         const uniqueIpoListings = completeIpoListings.length > 0 
-            ? completeIpoListings
-            : Array.from(
-                 new Map(allIpoListings.map((ipo) => [ipo.id, ipo])).values()
-              ).map((ipo) => ({
-                 ...ipo,
-                 underwriters: ipoUnderwriterMap.get(ipo.id) || []
-              }));
 
          setCombinedPerformance({
-            total_ipos: uniqueIpoListings.length,
+            total_ipos: ipoMap.size,
             performance_by_period: combinedPerformanceByPeriod,
-            ipo_listings: uniqueIpoListings
+            ipo_listings: Array.from(ipoMap.values()).sort(
+               (a, b) => new Date(b.ipo_date).getTime() - new Date(a.ipo_date).getTime()
+            ),
          });
       } catch (err) {
-         console.error('Error fetching combined performance:', err);
-         setError('Gagal memuat data performa. Silakan coba lagi.');
+         console.error('Error calculating combined performance:', err);
+         setError('Gagal menghitung data performa.');
+         setCombinedPerformance(null);
       } finally {
          setLoading(false);
       }
@@ -311,7 +234,7 @@ export default function UnderwriterComparison({ underwriters: underwritersJson }
       const activeSelected = newSelected.filter(id => id > 0);
       
       if (activeSelected.length > 0) {
-         fetchCombinedPerformance(activeSelected);
+         calculateCombinedPerformance(activeSelected);
       } else {
          setCombinedPerformance(null);
       }
@@ -343,7 +266,7 @@ export default function UnderwriterComparison({ underwriters: underwritersJson }
       // Recalculate performance if there are still selected underwriters
       const activeSelected = newSelected.filter(id => id > 0);
       if (activeSelected.length > 0) {
-         fetchCombinedPerformance(activeSelected);
+         calculateCombinedPerformance(activeSelected);
       } else {
          setCombinedPerformance(null);
       }
@@ -369,7 +292,7 @@ export default function UnderwriterComparison({ underwriters: underwritersJson }
       }
       
       if (activeSelected.length > 0) {
-         fetchCombinedPerformance(activeSelected);
+         calculateCombinedPerformance(activeSelected);
       } else {
          setCombinedPerformance(null);
       }

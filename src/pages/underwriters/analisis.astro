@@ -5,17 +5,102 @@ import Layout from '../../layouts/Layout.astro';
 import { supabase } from '../../db/supabase';
 import UnderwriterComparison from '../../components/UnderwriterComparison.tsx';
 
-// Fetch all underwriters for selection
+// Fetch underwriters along with IPO listings and performance metrics
 const { data: underwriters, error } = await supabase
   .from('underwriters')
-  .select('id, name')
+  .select(`
+    id,
+    name,
+    ipo_underwriters:ipo_underwriters (
+      ipo_listing:ipo_listings (
+        id,
+        ticker_symbol,
+        company_name,
+        ipo_date,
+        ipo_price,
+        general_sector,
+        specific_sector,
+        ipo_performance_metrics:ipo_performance_metrics (
+          metric_name,
+          metric_value,
+          period_days
+        ),
+        ipo_underwriters:ipo_underwriters (
+          underwriter:underwriters (
+            id,
+            name
+          )
+        )
+      )
+    )
+  `)
   .order('name', { ascending: true });
 
 if (error) {
   console.error('Error fetching underwriters:', error);
 }
 
-const underwritersList = underwriters || [];
+const underwritersWithStats =
+  (underwriters || []).map((underwriter: any) => {
+    const ipoUnderwriters = underwriter.ipo_underwriters || [];
+    const ipoListings = ipoUnderwriters
+      .map((item: any) => item.ipo_listing)
+      .filter((item: any) => item !== null)
+      .map((ipo: any) => ({
+        id: ipo.id,
+        ticker_symbol: ipo.ticker_symbol,
+        company_name: ipo.company_name,
+        ipo_date: ipo.ipo_date,
+        ipo_price: ipo.ipo_price,
+        general_sector: ipo.general_sector,
+        specific_sector: ipo.specific_sector,
+        ipo_performance_metrics: ipo.ipo_performance_metrics || [],
+        underwriters: (ipo.ipo_underwriters || [])
+          .map((item: any) => item.underwriter)
+          .filter((uw: any) => uw && uw.id && uw.name),
+      }));
+
+    const allMetrics: any[] = [];
+    ipoListings.forEach((ipo: any) => {
+      const metrics = ipo.ipo_performance_metrics || [];
+      allMetrics.push(...metrics);
+    });
+
+    const metricsByPeriod: Record<number, number[]> = {};
+    allMetrics.forEach((metric: any) => {
+      if (metric.period_days && metric.metric_value !== null) {
+        if (!metricsByPeriod[metric.period_days]) {
+          metricsByPeriod[metric.period_days] = [];
+        }
+        metricsByPeriod[metric.period_days].push(metric.metric_value);
+      }
+    });
+
+    const performanceByPeriod: Record<
+      number,
+      { avg: number; min: number; max: number; count: number }
+    > = {};
+    Object.keys(metricsByPeriod).forEach((period) => {
+      const values = metricsByPeriod[parseInt(period)];
+      const avg = values.reduce((a, b) => a + b, 0) / values.length;
+      performanceByPeriod[parseInt(period)] = {
+        avg: parseFloat(avg.toFixed(2)),
+        min: Math.min(...values),
+        max: Math.max(...values),
+        count: values.length,
+      };
+    });
+
+    return {
+      id: underwriter.id,
+      name: underwriter.name,
+      total_ipos: ipoListings.length,
+      performance_by_period: performanceByPeriod,
+      ipo_listings: ipoListings,
+    };
+  }) || [];
+
+const underwritersList = underwritersWithStats;
 ---
 
 <Layout 
