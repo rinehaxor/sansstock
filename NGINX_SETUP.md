@@ -35,10 +35,10 @@ server {
     # PERFORMANCE OPTIMIZATION
     # ============================================
 
-    # Cache headers untuk static assets
+    # Cache headers untuk static assets (CSS, JS, fonts, images)
     location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|webp|woff|woff2|ttf|eot)$ {
         expires 1y;
-        add_header Cache-Control "public, immutable";
+        add_header Cache-Control "public, max-age=31536000, immutable";
         access_log off;
     }
 

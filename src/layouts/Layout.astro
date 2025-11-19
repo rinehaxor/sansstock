@@ -36,44 +36,60 @@ const {
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link rel="preconnect" href="https://aitfpijkletoyuxujmnc.supabase.co" crossorigin>
 		<link rel="dns-prefetch" href="https://supabase.co" />
+		<link rel="dns-prefetch" href="https://connect.facebook.net" />
+		<link rel="dns-prefetch" href="https://www.google-analytics.com" />
+		<link rel="dns-prefetch" href="https://static.hotjar.com" />
+		<link rel="dns-prefetch" href="https://static.cloudflareinsights.com" />
 		<!-- Jangan preconnect ke pintu.co.id - akan di-load lazy -->
 		
-		<!-- Defer non-critical CSS loading -->
+		<!-- Defer non-critical CSS loading untuk mengurangi render blocking -->
 		<script is:inline>
 			// Defer CSS loading untuk non-critical CSS
-			// Run after DOM ready untuk catch Astro-injected CSS
+			// Run immediately untuk catch Astro-injected CSS before render
 			(function() {
-				function deferCSS() {
-					const links = document.querySelectorAll('link[rel="stylesheet"]:not([data-deferred])');
-					links.forEach(link => {
+				// Intercept link elements before they block render
+				const observer = new MutationObserver(function(mutations) {
+					mutations.forEach(function(mutation) {
+						mutation.addedNodes.forEach(function(node) {
+							if (node.nodeType === 1 && node.tagName === 'LINK' && node.rel === 'stylesheet') {
+								const href = node.getAttribute('href');
+								// Defer vendor CSS (non-critical)
+								if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
+									node.setAttribute('media', 'print');
+									node.setAttribute('onload', "this.media='all'");
+									// Fallback
+									const noscript = document.createElement('noscript');
+									const clone = node.cloneNode(true);
+									clone.removeAttribute('media');
+									clone.removeAttribute('onload');
+									noscript.appendChild(clone);
+									node.parentNode.insertBefore(noscript, node.nextSibling);
+								}
+							}
+						});
+					});
+				});
+				
+				// Start observing before DOM is ready
+				observer.observe(document.head, { childList: true, subtree: true });
+				
+				// Also handle existing links
+				function deferExistingCSS() {
+					document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
 						const href = link.getAttribute('href');
-						// Skip inline styles, fonts, dan yang sudah di-defer
-						if (href && !href.startsWith('data:') && !href.includes('fonts.googleapis.com') && !link.hasAttribute('data-deferred')) {
+						if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk')) && !link.hasAttribute('data-deferred')) {
 							link.setAttribute('media', 'print');
 							link.setAttribute('onload', "this.media='all';this.setAttribute('data-deferred','true')");
 							link.setAttribute('data-deferred', 'true');
-							// Fallback untuk browsers tanpa onload support
-							if (!link.nextSibling || link.nextSibling.tagName !== 'NOSCRIPT') {
-								const noscript = document.createElement('noscript');
-								const clone = link.cloneNode(true);
-								clone.removeAttribute('media');
-								clone.removeAttribute('onload');
-								noscript.appendChild(clone);
-								link.parentNode.insertBefore(noscript, link.nextSibling);
-							}
 						}
 					});
 				}
 				
-				// Run immediately untuk catch existing links
-				deferCSS();
-				
-				// Run after DOM ready untuk catch Astro-injected CSS
+				// Run immediately
 				if (document.readyState === 'loading') {
-					document.addEventListener('DOMContentLoaded', deferCSS);
+					document.addEventListener('DOMContentLoaded', deferExistingCSS);
 				} else {
-					// DOM already ready, run after a short delay untuk catch Astro CSS
-					setTimeout(deferCSS, 0);
+					deferExistingCSS();
 				}
 			})();
 		</script>

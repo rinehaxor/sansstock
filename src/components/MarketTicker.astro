@@ -35,9 +35,11 @@ export const prerender = false;
         style="border:none; border-radius:8px; overflow:hidden; background:transparent; display:none;"
         loading="lazy"
         class="w-full"
-        sandbox="allow-scripts allow-same-origin"
-        referrerpolicy="no-referrer"
+        sandbox="allow-scripts allow-same-origin allow-forms"
+        referrerpolicy="no-referrer-when-downgrade"
         importance="low"
+        allow="clipboard-read; clipboard-write"
+        crossorigin="anonymous"
       ></iframe>
     </div>
   </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import NewsCard from './NewsCardWrapper';
 
 interface Category {
@@ -32,19 +32,25 @@ interface CategoryTabsProps {
 }
 
 export default function CategoryTabs({ categories: categoriesProp, initialCategoryId }: CategoryTabsProps) {
-   // Parse categories if it's a JSON string
-   let categories: Category[] = [];
-   try {
-      categories = typeof categoriesProp === 'string' ? JSON.parse(categoriesProp) : categoriesProp;
-      // Ensure it's an array
-      if (!Array.isArray(categories)) {
-         categories = [];
+   // Parse categories if it's a JSON string - use useMemo untuk avoid re-parsing
+   const categories = useMemo(() => {
+      try {
+         const parsed = typeof categoriesProp === 'string' ? JSON.parse(categoriesProp) : categoriesProp;
+         // Ensure it's an array
+         if (!Array.isArray(parsed)) {
+            return [];
+         }
+         return parsed;
+      } catch (error) {
+         return [];
       }
-   } catch (error) {
-      categories = [];
-   }
+   }, [categoriesProp]);
 
-   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(initialCategoryId || (categories.length > 0 ? categories[0].id : null));
+   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(() => {
+      if (initialCategoryId) return initialCategoryId;
+      if (categories.length > 0) return categories[0].id;
+      return null;
+   });
    const [articles, setArticles] = useState<Article[]>([]);
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState<string | null>(null);
