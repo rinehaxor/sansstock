@@ -274,7 +274,7 @@ const pageImage = `${siteUrl}/logo.png`;
 	<MarketOverview />
 	<CategoryTabs 
 		client:only="react" 
-		categories={JSON.stringify(availableCategories)} 
+		categories={JSON.stringify(availableCategories || [])} 
 		initialCategoryId={availableCategories && availableCategories.length > 0 ? availableCategories[0].id : undefined}
 	/>
 	<NewsList />

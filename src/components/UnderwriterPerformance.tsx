@@ -43,73 +43,52 @@ function getPeriodLabel(periodDays: number): string {
 }
 
 export default function UnderwriterPerformance({ underwriters: underwritersJson }: UnderwriterPerformanceProps) {
-   const [underwriters, setUnderwriters] = React.useState<Underwriter[]>([]);
+   // Parse underwriters - simple and straightforward
+   let underwriters: Underwriter[] = [];
+   try {
+      if (typeof underwritersJson === 'string') {
+         underwriters = JSON.parse(underwritersJson) || [];
+      } else if (Array.isArray(underwritersJson)) {
+         underwriters = underwritersJson;
+      }
+   } catch (error) {
+      underwriters = [];
+   }
+
    const [sortBy, setSortBy] = React.useState<'name' | 'total_ipos' | 'avg_performance'>('total_ipos');
    const [periodFilter, setPeriodFilter] = React.useState<number | null>(null);
    const [searchQuery, setSearchQuery] = React.useState('');
-   const [parseError, setParseError] = React.useState<string | null>(null);
-
-   // Parse underwriters from JSON string
-   React.useEffect(() => {
-      try {
-         if (!underwritersJson) {
-            console.warn('UnderwriterPerformance: No underwriters data provided');
-            setUnderwriters([]);
-            return;
-         }
-
-         const parsed = typeof underwritersJson === 'string' ? JSON.parse(underwritersJson) : underwritersJson;
-
-         if (!Array.isArray(parsed)) {
-            console.error('UnderwriterPerformance: Parsed data is not an array', parsed);
-            setParseError('Invalid data format');
-            setUnderwriters([]);
-            return;
-         }
-
-         setUnderwriters(parsed);
-         setParseError(null);
-      } catch (error) {
-         console.error('UnderwriterPerformance: Error parsing underwriters JSON', error);
-         setParseError(error instanceof Error ? error.message : 'Failed to parse data');
-         setUnderwriters([]);
-      }
-   }, [underwritersJson]);
 
    // Filter and sort underwriters
-   const sortedUnderwriters = React.useMemo(() => {
-      let filtered = [...underwriters];
+   let sortedUnderwriters = [...underwriters];
 
-      // Filter by search query
-      if (searchQuery.trim()) {
-         const query = searchQuery.toLowerCase().trim();
-         filtered = filtered.filter((u) => u.name.toLowerCase().includes(query));
-      }
+   // Filter by search query
+   if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      sortedUnderwriters = sortedUnderwriters.filter((u) => u.name.toLowerCase().includes(query));
+   }
 
-      // Sort
-      switch (sortBy) {
-         case 'total_ipos':
-            return filtered.sort((a, b) => b.total_ipos - a.total_ipos);
-         case 'avg_performance':
-            const period = periodFilter || 30;
-            return filtered.sort((a, b) => {
-               const aAvg = a.performance_by_period[period]?.avg || 0;
-               const bAvg = b.performance_by_period[period]?.avg || 0;
-               return bAvg - aAvg;
-            });
-         default:
-            return filtered.sort((a, b) => a.name.localeCompare(b.name));
-      }
-   }, [underwriters, sortBy, periodFilter, searchQuery]);
+   // Sort
+   if (sortBy === 'total_ipos') {
+      sortedUnderwriters.sort((a, b) => b.total_ipos - a.total_ipos);
+   } else if (sortBy === 'avg_performance') {
+      const period = periodFilter || 30;
+      sortedUnderwriters.sort((a, b) => {
+         const aAvg = a.performance_by_period[period]?.avg || 0;
+         const bAvg = b.performance_by_period[period]?.avg || 0;
+         return bAvg - aAvg;
+      });
+   } else {
+      sortedUnderwriters.sort((a, b) => a.name.localeCompare(b.name));
+   }
 
    // Get available periods from all underwriters
-   const availablePeriods = React.useMemo(() => {
-      const periods = new Set<number>();
-      underwriters.forEach((u) => {
-         Object.keys(u.performance_by_period).forEach((p) => periods.add(parseInt(p)));
-      });
-      return Array.from(periods).sort((a, b) => a - b);
-   }, [underwriters]);
+   const availablePeriods: number[] = [];
+   const periodSet = new Set<number>();
+   underwriters.forEach((u) => {
+      Object.keys(u.performance_by_period).forEach((p) => periodSet.add(parseInt(p)));
+   });
+   availablePeriods.push(...Array.from(periodSet).sort((a, b) => a - b));
 
    // Calculate column span for table cells
    const colSpan = 2 + Math.min(availablePeriods.length, 4) + 1;
@@ -145,6 +124,15 @@ export default function UnderwriterPerformance({ underwriters: underwritersJson 
          );
       });
    };
+
+   // Don't render if no data
+   if (!underwriters || underwriters.length === 0) {
+      return (
+         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 sm:p-12 text-center">
+            <p className="text-gray-500 text-sm sm:text-lg">Belum ada data underwriter.</p>
+         </div>
+      );
+   }
 
    return (
       <div className="space-y-6">
@@ -216,14 +204,7 @@ export default function UnderwriterPerformance({ underwriters: underwritersJson 
                      </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                     {parseError ? (
-                        <tr>
-                           <td colSpan={colSpan} className="px-4 sm:px-6 py-8 text-center">
-                              <div className="text-sm text-red-600 mb-2">Error memuat data: {parseError}</div>
-                              <div className="text-xs text-gray-500">Silakan refresh halaman atau hubungi administrator</div>
-                           </td>
-                        </tr>
-                     ) : sortedUnderwriters.length === 0 ? (
+                     {sortedUnderwriters.length === 0 ? (
                         <tr>
                            <td colSpan={colSpan} className="px-4 sm:px-6 py-8 text-center text-sm text-gray-500">
                               {searchQuery ? 'Tidak ada underwriter yang ditemukan' : 'Belum ada data underwriter'}

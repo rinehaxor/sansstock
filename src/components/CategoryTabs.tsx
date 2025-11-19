@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import NewsCard from './NewsCardWrapper';
 
 interface Category {
@@ -27,114 +27,68 @@ interface Article {
 }
 
 interface CategoryTabsProps {
-   categories: string | Category[]; // Accept string (JSON) or array
+   categories: string | Category[];
    initialCategoryId?: number;
 }
 
 export default function CategoryTabs({ categories: categoriesProp, initialCategoryId }: CategoryTabsProps) {
-   // Parse categories if it's a JSON string
-   const categories = useMemo(() => {
-      try {
-         const parsed = typeof categoriesProp === 'string' ? JSON.parse(categoriesProp) : categoriesProp;
-         if (!Array.isArray(parsed)) {
-            return [];
-         }
-         return parsed;
-      } catch (error) {
-         return [];
+   // Parse categories - simple and straightforward
+   let categories: Category[] = [];
+   try {
+      if (typeof categoriesProp === 'string') {
+         categories = JSON.parse(categoriesProp) || [];
+      } else if (Array.isArray(categoriesProp)) {
+         categories = categoriesProp;
       }
-   }, [categoriesProp]);
+   } catch (error) {
+      categories = [];
+   }
 
-   // Initialize state dengan useEffect untuk avoid hydration mismatch
-   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
-   const [mounted, setMounted] = useState(false);
+   // Set initial active category
+   const getInitialCategoryId = () => {
+      if (initialCategoryId) return initialCategoryId;
+      if (categories.length > 0) return categories[0].id;
+      return null;
+   };
 
-   useEffect(() => {
-      setMounted(true);
-      if (initialCategoryId) {
-         setActiveCategoryId(initialCategoryId);
-      } else if (categories.length > 0) {
-         setActiveCategoryId(categories[0].id);
-      }
-   }, [initialCategoryId, categories]);
+   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(getInitialCategoryId());
    const [articles, setArticles] = useState<Article[]>([]);
    const [loading, setLoading] = useState(false);
    const [error, setError] = useState<string | null>(null);
 
-   // Fetch articles for active category
+   // Fetch articles when category changes
    useEffect(() => {
       if (!activeCategoryId) return;
 
-      const controller = new AbortController();
-      
-      const fetchArticles = async () => {
-         setLoading(true);
-         setError(null);
-         
-         try {
-            const apiUrl = `/api/articles?category_id=${activeCategoryId}&status=published&limit=4`;
-            
-            const response = await fetch(apiUrl, {
-               signal: controller.signal,
-               cache: 'no-store', // Always fetch fresh data
-               headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-               },
-            });
-            
+      setLoading(true);
+      setError(null);
+
+      fetch(`/api/articles?category_id=${activeCategoryId}&status=published&limit=4`)
+         .then((response) => {
             if (!response.ok) {
-               // Try to get error message from response
-               let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-               try {
-                  const errorData = await response.json();
-                  errorMessage = errorData.error || errorData.message || errorMessage;
-               } catch {
-                  // If response is not JSON, use status text
-               }
-               
-               setError(errorMessage);
-               setArticles([]);
-               setLoading(false);
-               return;
+               throw new Error(`HTTP ${response.status}`);
             }
-            
-            const result = await response.json();
-            
-            // Handle different response formats
+            return response.json();
+         })
+         .then((result) => {
             const articlesData = result.data || result.articles || [];
-            
             if (Array.isArray(articlesData)) {
                setArticles(articlesData);
-               setError(null);
             } else {
-               setError('Invalid response format from server');
                setArticles([]);
             }
-         } catch (error) {
-            // Ignore abort errors
-            if (error instanceof Error && error.name === 'AbortError') {
-               return;
-            }
-            
-            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-            setError(`Network error: ${errorMsg}`);
+         })
+         .catch((err) => {
+            setError(err.message || 'Gagal memuat artikel');
             setArticles([]);
-         } finally {
+         })
+         .finally(() => {
             setLoading(false);
-         }
-      };
-
-      fetchArticles();
-      
-      // Cleanup function
-      return () => {
-         controller.abort();
-      };
+         });
    }, [activeCategoryId]);
 
-   // Jangan render sampai mounted untuk avoid hydration error
-   if (!mounted || categories.length === 0) {
+   // Don't render if no categories
+   if (!categories || categories.length === 0) {
       return null;
    }
 
@@ -148,7 +102,9 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
                      key={category.id}
                      onClick={() => setActiveCategoryId(category.id)}
                      className={`px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                        activeCategoryId === category.id ? 'border-blue-600 text-blue-600 font-semibold' : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                        activeCategoryId === category.id
+                           ? 'border-blue-600 text-blue-600 font-semibold'
+                           : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
                      }`}
                   >
                      {category.name}
@@ -162,6 +118,11 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
             <div className="flex items-center justify-center py-12">
                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
                <p className="ml-3 text-gray-600 text-sm sm:text-base">Memuat artikel...</p>
+            </div>
+         ) : error ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 sm:p-12 text-center">
+               <p className="text-yellow-800 text-sm sm:text-lg mb-2">Error memuat artikel</p>
+               <p className="text-yellow-600 text-xs sm:text-sm">{error}</p>
             </div>
          ) : articles.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -179,11 +140,6 @@ export default function CategoryTabs({ categories: categoriesProp, initialCatego
                      categories={article.categories}
                   />
                ))}
-            </div>
-         ) : error ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 sm:p-12 text-center">
-               <p className="text-yellow-800 text-sm sm:text-lg mb-2">Error memuat artikel</p>
-               <p className="text-yellow-600 text-xs sm:text-sm">{error}</p>
             </div>
          ) : (
             <div className="bg-white rounded-xl border border-gray-200 p-8 sm:p-12 text-center">
