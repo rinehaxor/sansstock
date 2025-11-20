@@ -8,7 +8,6 @@ import MarketTicker from '../components/MarketTicker.astro';
 import FeaturedNews from '../components/FeaturedNews.astro';
 import MarketOverview from '../components/MarketOverview.astro';
 import NewsList from '../components/NewsList.astro';
-import CategoryTabs from '../components/CategoryTabs.tsx';
 import { supabase } from '../db/supabase';
 import { cache, CACHE_KEYS } from '../lib/cache';
 import { getMarketData } from '../lib/market';
@@ -272,11 +271,240 @@ const pageImage = `${siteUrl}/logo.png`;
 	<!-- <MarketTicker /> -->
 	<FeaturedNews />
 	<MarketOverview />
-	<CategoryTabs 
-		client:only="react"
-		categories={JSON.stringify(availableCategories || [])} 
-		initialCategoryId={availableCategories && availableCategories.length > 0 ? availableCategories[0].id : undefined}
-	/>
+
+	<section class="mb-16" data-category-tabs>
+		<div class="border-b border-gray-200 mb-6 overflow-x-auto -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+			<div class="inline-flex h-auto w-full justify-start bg-transparent p-0 space-x-1">
+				{Array.isArray(availableCategories) && availableCategories.length > 0 ? (
+					availableCategories.map((category) => (
+						<button
+							key={category.id}
+							data-category-tab
+							data-category-id={category.id}
+							class="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 rounded-none border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+							type="button"
+						>
+							{category.name}
+						</button>
+					))
+				) : (
+					<p class="text-gray-500 text-sm">Tidak ada kategori.</p>
+				)}
+			</div>
+		</div>
+
+		<div id="category-articles" class="mt-0">
+			<div class="flex items-center justify-center py-12">
+				<div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+				<p class="ml-3 text-gray-600 text-sm sm:text-base">Memuat artikel...</p>
+			</div>
+		</div>
+	</section>
+
 	<NewsList />
 	</div>
+
+	<script is:inline define:vars={{ 
+		categories: availableCategories || [], 
+		initialCategoryId: availableCategories && availableCategories.length > 0 ? availableCategories[0].id : null 
+	}}>
+	(function () {
+		if (!Array.isArray(categories) || categories.length === 0) {
+			return;
+		}
+
+		var tabsRoot = document.querySelector('[data-category-tabs]');
+		if (!tabsRoot) return;
+
+		var buttons = Array.prototype.slice.call(
+			tabsRoot.querySelectorAll('[data-category-tab]')
+		);
+
+		var articlesContainer = document.getElementById('category-articles');
+		if (!articlesContainer) return;
+
+		var activeCategoryId = initialCategoryId || (categories[0] && categories[0].id);
+		var cache = {};
+
+		function setActiveButton(categoryId) {
+			buttons.forEach(function (btn) {
+				var id = Number(btn.getAttribute('data-category-id') || '0');
+				if (id === categoryId) {
+					btn.classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
+				} else {
+					btn.classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
+				}
+			});
+		}
+
+		function renderLoading() {
+			articlesContainer.innerHTML =
+				'<div class="flex items-center justify-center py-12">' +
+				'<div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>' +
+				'<p class="ml-3 text-gray-600 text-sm sm:text-base">Memuat artikel...</p>' +
+				'</div>';
+		}
+
+		function renderError(message) {
+			articlesContainer.innerHTML =
+				'<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-8 sm:p-12 text-center">' +
+				'<p class="text-yellow-800 text-sm sm:text-lg mb-2">Error memuat artikel</p>' +
+				'<p class="text-yellow-600 text-xs sm:text-sm">' + (message || 'Gagal memuat artikel') + '</p>' +
+				'</div>';
+		}
+
+		function escapeHtml(value) {
+			if (!value) return '';
+			return String(value)
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;');
+		}
+
+		function renderEmpty() {
+			articlesContainer.innerHTML =
+				'<div class="bg-white rounded-xl border border-gray-200 p-8 sm:p-12 text-center">' +
+				'<p class="text-gray-500 text-sm sm:text-lg">Belum ada artikel untuk kategori ini.</p>' +
+				'</div>';
+		}
+
+		function renderArticles(articles) {
+			if (!Array.isArray(articles) || articles.length === 0) {
+				renderEmpty();
+				return;
+			}
+
+			var itemsHtml = articles.map(function (article) {
+				var title = escapeHtml(article.title || '');
+				var summary = escapeHtml(article.summary || 'Tidak ada ringkasan tersedia...');
+				var slug = escapeHtml(article.slug || '');
+				var thumbnailUrl = article.thumbnail_url ? escapeHtml(article.thumbnail_url) : '';
+				var thumbnailAlt = escapeHtml(article.thumbnail_alt || article.title || 'Article thumbnail');
+				var categoryName = article.categories && article.categories.name ? escapeHtml(article.categories.name) : 'Umum';
+				var categorySlug = article.categories && article.categories.slug ? escapeHtml(article.categories.slug) : '';
+				var articleUrl = '/artikel/' + slug;
+				var categoryUrl = categorySlug ? ('/categories/' + categorySlug) : '';
+
+				var dateString = article.published_at || article.created_at;
+				var timeAgo = 'Baru saja';
+				if (dateString) {
+					var date = new Date(dateString);
+					var now = new Date();
+					var diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+					if (diffInSeconds >= 60) {
+						if (diffInSeconds < 3600) {
+							timeAgo = Math.floor(diffInSeconds / 60) + ' menit yang lalu';
+						} else if (diffInSeconds < 86400) {
+							timeAgo = Math.floor(diffInSeconds / 3600) + ' jam yang lalu';
+						} else if (diffInSeconds < 604800) {
+							timeAgo = Math.floor(diffInSeconds / 86400) + ' hari yang lalu';
+						} else if (diffInSeconds < 2592000) {
+							timeAgo = Math.floor(diffInSeconds / 604800) + ' minggu yang lalu';
+						} else {
+							timeAgo = Math.floor(diffInSeconds / 2592000) + ' bulan yang lalu';
+						}
+					}
+				}
+
+				var metaLine = categorySlug
+					? '<a href="' + categoryUrl + '" class="hover:underline">' + categoryName + '</a> | ' + timeAgo
+					: categoryName + ' | ' + timeAgo;
+
+				var imageHtml;
+				if (thumbnailUrl) {
+					imageHtml =
+						'<img src="' + thumbnailUrl + '" alt="' + thumbnailAlt + '"' +
+						' class="w-full sm:w-48 h-48 sm:h-28 rounded-lg object-cover" loading="lazy"' +
+						' width="192" height="112" decoding="async" fetchpriority="low"' +
+						' sizes="(max-width: 640px) 100vw, 192px" style="aspect-ratio: 192/112" />';
+				} else {
+					imageHtml =
+						'<div class="w-full sm:w-48 h-48 sm:h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">' +
+						'<svg class="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+						'<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>' +
+						'</svg>' +
+						'</div>';
+				}
+
+				return (
+					'<article class="group bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">' +
+					'<div class="flex flex-col sm:flex-row gap-4 sm:gap-6">' +
+					'<a href="' + articleUrl + '" class="flex-shrink-0 w-full sm:w-48">' +
+					imageHtml +
+					'</a>' +
+					'<div class="flex-1 min-w-0">' +
+					'<a href="' + articleUrl + '" class="block">' +
+					'<h3 class="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">' +
+					title +
+					'</h3>' +
+					'<p class="text-sm text-gray-600 mb-3 line-clamp-2 sm:line-clamp-2">' +
+					summary +
+					'</p>' +
+					'</a>' +
+					'<p class="text-xs sm:text-sm text-blue-600 font-medium">' +
+					metaLine +
+					'</p>' +
+					'</div>' +
+					'</div>' +
+					'</article>'
+				);
+			}).join('');
+
+			articlesContainer.innerHTML =
+				'<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">' +
+				itemsHtml +
+				'</div>';
+		}
+
+		async function fetchArticles(categoryId) {
+			if (!categoryId) return;
+
+			if (cache[categoryId]) {
+				renderArticles(cache[categoryId]);
+				setActiveButton(categoryId);
+				return;
+			}
+
+			renderLoading();
+			setActiveButton(categoryId);
+
+			try {
+				var params = new URLSearchParams();
+				params.set('category_id', String(categoryId));
+				params.set('status', 'published');
+				params.set('limit', '4');
+
+				var response = await fetch('/api/articles?' + params.toString());
+				if (!response.ok) throw new Error('HTTP ' + response.status);
+
+				var result = await response.json();
+				var articles = Array.isArray(result.data)
+					? result.data
+					: (Array.isArray(result.articles) ? result.articles : []);
+
+				cache[categoryId] = articles;
+				renderArticles(articles);
+			} catch (error) {
+				console.error('Error fetching articles:', error);
+				renderError(error && error.message ? error.message : 'Gagal memuat artikel');
+			}
+		}
+
+		buttons.forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var idAttr = btn.getAttribute('data-category-id');
+				var id = Number(idAttr || '0');
+				if (!id || id === activeCategoryId) return;
+				activeCategoryId = id;
+				fetchArticles(id);
+			});
+		});
+
+		if (activeCategoryId) {
+			fetchArticles(activeCategoryId);
+		}
+	})();
+	</script>
 </Layout>
