@@ -189,7 +189,7 @@ const pageImage = `${siteUrl}/logo.png`;
 		<meta name="publisher" content="EmitenHub" />
 		
 		{/* Structured Data (JSON-LD) - Organization */}
-		{(() => {
+		{false && (() => {
 			const orgData = {
 				"@context": "https://schema.org",
 				"@type": "Organization",
@@ -207,7 +207,7 @@ const pageImage = `${siteUrl}/logo.png`;
 		})()}
 		
 		{/* Structured Data (JSON-LD) - WebSite */}
-		{(() => {
+		{false && (() => {
 			const categoryNavItems = availableCategories && availableCategories.length > 0 
 				? availableCategories.slice(0, 5).map((category: any) => ({
 					"@type": "SiteNavigationElement",
@@ -253,7 +253,7 @@ const pageImage = `${siteUrl}/logo.png`;
 		})()}
 		
 		{/* Structured Data (JSON-LD) - BreadcrumbList for Homepage */}
-		{(() => {
+		{false && (() => {
 			const breadcrumbData = {
 				"@context": "https://schema.org",
 				"@type": "BreadcrumbList",
@@ -269,11 +269,11 @@ const pageImage = `${siteUrl}/logo.png`;
 	</Fragment>
 
 	<div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
-	<MarketTicker />
+	<!-- <MarketTicker /> -->
 	<FeaturedNews />
 	<MarketOverview />
 	<CategoryTabs 
-		client:load 
+		client:only="react"
 		categories={JSON.stringify(availableCategories || [])} 
 		initialCategoryId={availableCategories && availableCategories.length > 0 ? availableCategories[0].id : undefined}
 	/>

@@ -47,64 +47,67 @@ const changeIcon = changeType === 'positive' ? 'M7 11l5-5m0 0l5 5m-5-5v12' : 'M1
 	<script define:vars={{ symbolValue: String(symbol) }}>
 		// Real-time update untuk market data
 		(function() {
-			const symbolValue = symbolValue || '';
-			if (!symbolValue) return;
+			const runtimeSymbol = symbolValue || '';
+			if (!runtimeSymbol) return;
 			
-			const card = document.querySelector(`[data-market-card="${symbolValue}"]`);
-		if (!card) return;
+			const card = document.querySelector(`[data-market-card="${runtimeSymbol}"]`);
+			if (!card) return;
 
-		const valueEl = card.querySelector('[data-value]');
-		const changeEl = card.querySelector('[data-change]');
-		
-		if (!valueEl || !changeEl) return;
+			const valueEl = card.querySelector('[data-value]');
+			const changeEl = card.querySelector('[data-change]');
+			
+			if (!valueEl || !changeEl) return;
 
-		async function updateMarketData() {
-			try {
-				const response = await fetch(`/api/market?symbols=${symbolValue}`);
-				if (!response.ok) return;
-				
-				const result = await response.json();
-				const marketData = result.data?.find((item: any) => item.symbol === symbolValue);
-				
-				if (marketData) {
-					// Update value dengan animasi
-					if (valueEl.textContent !== marketData.value) {
-						(valueEl as HTMLElement).style.transition = 'all 0.3s ease';
-						(valueEl as HTMLElement).style.transform = 'scale(1.05)';
-						setTimeout(() => {
-							if (valueEl) {
-								valueEl.textContent = marketData.value;
-								(valueEl as HTMLElement).style.transform = 'scale(1)';
-							}
-						}, 150);
-					}
+			async function updateMarketData() {
+				try {
+					const response = await fetch(`/api/market?symbols=${runtimeSymbol}`);
+					if (!response.ok) return;
 					
-					// Update change
-					if (changeEl.textContent !== marketData.change) {
-						(changeEl as HTMLElement).style.transition = 'all 0.3s ease';
-						(changeEl as HTMLElement).style.opacity = '0.5';
-						setTimeout(() => {
-							if (changeEl) {
-								changeEl.textContent = marketData.change;
-								(changeEl as HTMLElement).style.opacity = '1';
-							}
-						}, 150);
+					const result = await response.json();
+					const dataArray = result && result.data;
+					const marketData = Array.isArray(dataArray)
+						? dataArray.find((item) => item && item.symbol === runtimeSymbol)
+						: null;
+					
+					if (marketData) {
+						// Update value dengan animasi
+						if (valueEl.textContent !== marketData.value) {
+							valueEl.style.transition = 'all 0.3s ease';
+							valueEl.style.transform = 'scale(1.05)';
+							setTimeout(() => {
+								if (valueEl) {
+									valueEl.textContent = marketData.value;
+									valueEl.style.transform = 'scale(1)';
+								}
+							}, 150);
+						}
+						
+						// Update change
+						if (changeEl.textContent !== marketData.change) {
+							changeEl.style.transition = 'all 0.3s ease';
+							changeEl.style.opacity = '0.5';
+							setTimeout(() => {
+								if (changeEl) {
+									changeEl.textContent = marketData.change;
+									changeEl.style.opacity = '1';
+								}
+							}, 150);
+						}
 					}
+				} catch (error) {
+					console.error('Error updating market data:', error);
 				}
-			} catch (error) {
-				console.error('Error updating market data:', error);
 			}
-		}
 
-		// Update setiap 30 detik (bisa disesuaikan)
-		const intervalId = setInterval(updateMarketData, 30000);
-		
-		// Cleanup saat component di-unmount
-		if (typeof window !== 'undefined') {
-			window.addEventListener('beforeunload', () => {
-				clearInterval(intervalId);
-			});
-		}
+			// Update setiap 30 detik (bisa disesuaikan)
+			const intervalId = setInterval(updateMarketData, 30000);
+			
+			// Cleanup saat component di-unmount
+			if (typeof window !== 'undefined') {
+				window.addEventListener('beforeunload', () => {
+					clearInterval(intervalId);
+				});
+			}
 		})();
 	</script>
 )}
