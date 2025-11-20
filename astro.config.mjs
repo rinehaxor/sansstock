@@ -14,6 +14,9 @@ export default defineConfig({
    adapter: node({
       mode: 'standalone',
    }),
+   security: {
+      checkOrigin: false,
+   },
    integrations: [tailwind(), react(), sitemap()],
    image: {
       domains: ['localhost', 'supabase.co', '*.supabase.co'],
