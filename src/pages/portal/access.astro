@@ -2,7 +2,6 @@
 export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
-import LoginForm from '../../components/LoginForm';
 import { Image } from 'astro:assets';
 import logo from '../../assets/logo.png';
 
@@ -29,9 +28,47 @@ if (accessToken && refreshToken) {
 
 			<!-- Login Form -->
 			<div class="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
-				<LoginForm client:only="react" />
+				<form id="login-form" class="space-y-6">
+					<div>
+						<label for="email" class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+						<input
+							id="email"
+							name="email"
+							type="email"
+							autocomplete="email"
+							class="w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+							placeholder="Enter your email"
+							required
+						/>
+						<p id="email-error" class="mt-1 text-sm text-red-600 hidden"></p>
+					</div>
+					<div>
+						<label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+						<input
+							id="password"
+							name="password"
+							type="password"
+							autocomplete="current-password"
+							class="w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 border-gray-300"
+							placeholder="Enter your password"
+							required
+							minlength="6"
+						/>
+						<p id="password-error" class="mt-1 text-sm text-red-600 hidden"></p>
+					</div>
+					<div id="login-error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm hidden"></div>
+					<div>
+						<button
+							id="login-submit"
+							type="submit"
+							class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+						>
+							Sign in
+						</button>
+					</div>
+				</form>
 			</div>
-
+			
 			<!-- Footer -->
 			<div class="text-center">
 				<p class="text-sm text-gray-600">
@@ -39,6 +76,155 @@ if (accessToken && refreshToken) {
 				</p>
 			</div>
 		</div>
-	</div>
+		
+		<script is:inline>
+		(function() {
+			var form = document.getElementById('login-form');
+			if (!form) return;
+			var emailInput = document.getElementById('email');
+			var passwordInput = document.getElementById('password');
+			var emailError = document.getElementById('email-error');
+			var passwordError = document.getElementById('password-error');
+			var errorBox = document.getElementById('login-error');
+			var submitButton = document.getElementById('login-submit');
+			var csrfToken = null;
+			var isSubmitting = false;
 
-</Layout>
+			function setSubmitting(value) {
+				isSubmitting = value;
+				if (!submitButton) return;
+				if (value) {
+					submitButton.setAttribute('disabled', 'true');
+					submitButton.textContent = 'Signing in...';
+				} else {
+					submitButton.removeAttribute('disabled');
+					submitButton.textContent = 'Sign in';
+				}
+			}
+
+			function showError(message) {
+				if (!errorBox) return;
+				errorBox.textContent = message || 'Terjadi kesalahan saat login';
+				errorBox.classList.remove('hidden');
+			}
+
+			function clearFieldErrors() {
+				if (emailError) {
+					emailError.textContent = '';
+					emailError.classList.add('hidden');
+				}
+				if (passwordError) {
+					passwordError.textContent = '';
+					passwordError.classList.add('hidden');
+				}
+				if (errorBox) {
+					errorBox.textContent = '';
+					errorBox.classList.add('hidden');
+				}
+			}
+
+			async function fetchCsrfToken() {
+				try {
+					var response = await fetch('/api/auth/csrf-token', {
+						method: 'GET',
+						credentials: 'include'
+					});
+					if (!response.ok) {
+						throw new Error('Gagal mengambil CSRF token');
+					}
+					var json = await response.json();
+					csrfToken = json && json.csrfToken ? json.csrfToken : null;
+					return csrfToken;
+				} catch (e) {
+					showError('Gagal menyiapkan proteksi keamanan. Refresh halaman dan coba lagi.');
+					throw e;
+				}
+			}
+
+			// Pre-fetch CSRF token saat halaman load
+			fetchCsrfToken().catch(function() {
+				// error sudah ditampilkan oleh showError
+			});
+
+			form.addEventListener('submit', function(event) {
+				event.preventDefault();
+				if (isSubmitting) return;
+				clearFieldErrors();
+
+				var email = emailInput && emailInput.value ? emailInput.value.trim() : '';
+				var password = passwordInput && passwordInput.value ? passwordInput.value : '';
+
+				var hasError = false;
+				if (!email) {
+					hasError = true;
+					if (emailError) {
+						emailError.textContent = 'Email wajib diisi';
+						emailError.classList.remove('hidden');
+					}
+				}
+				if (!password || password.length < 6) {
+					hasError = true;
+					if (passwordError) {
+						passwordError.textContent = 'Password minimal 6 karakter';
+						passwordError.classList.remove('hidden');
+					}
+				}
+				if (hasError) return;
+
+				setSubmitting(true);
+
+				var doSubmit = async function() {
+					try {
+						var token = csrfToken || await fetchCsrfToken();
+						var formData = new FormData();
+						formData.append('email', email);
+						formData.append('password', password);
+
+						var response = await fetch('/api/auth/signin', {
+							method: 'POST',
+							body: formData,
+							credentials: 'include',
+							headers: {
+								'X-CSRF-Token': token || ''
+							}
+						});
+
+						if (!response.ok) {
+							if (response.status === 403) {
+								await fetchCsrfToken();
+								throw new Error('Sesi keamanan kedaluwarsa. Silakan coba lagi.');
+							}
+							var errorData = null;
+							try {
+								errorData = await response.json();
+							} catch (e) {}
+							var message = errorData && errorData.error ? errorData.error : 'Login gagal';
+							throw new Error(message);
+						}
+
+						var result = null;
+						try {
+							result = await response.json();
+						} catch (e) {}
+						if (result && result.csrfToken) {
+							csrfToken = result.csrfToken;
+						}
+
+						if (result && result.success && result.redirect) {
+							window.location.replace(result.redirect);
+						} else {
+							window.location.replace('/dashboard');
+						}
+					} catch (e) {
+						setSubmitting(false);
+						var message = e && e.message ? e.message : 'Terjadi kesalahan saat login';
+						showError(message);
+					}
+				};
+
+				doSubmit();
+			});
+		})();
+		</script>
+		
+		</Layout>
