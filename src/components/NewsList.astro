@@ -5,7 +5,6 @@ import { supabase } from '../db/supabase';
 import PopularNews from './PopularNews.astro';
 import AdsWidget from './AdsWidget.astro';
 import TrendingTags from './TrendingTags.astro';
-import NewsPagination from './NewsPagination.tsx';
 import { batchGetAltText } from '../lib/utils';
 
 // Get page from URL query parameter
@@ -65,13 +64,122 @@ const articlesWithAltText = (articles || []).map((article: any) => ({
 	<div class="grid lg:grid-cols-3 gap-4 sm:gap-8">
 		<!-- Main News Content -->
 		<div class="lg:col-span-2">
-			<!-- News List with Pagination (Client-side) -->
-			<NewsPagination 
-				client:visible
-				initialPage={page}
-				initialArticles={articlesWithAltText}
-				initialTotalPages={totalPages}
-			/>
+			<div id="news-list-section" class="space-y-4 sm:space-y-8">
+				{articlesWithAltText && articlesWithAltText.length > 0 ? (
+					articlesWithAltText.map((article: any) => {
+						const dateString = article.published_at || article.created_at;
+						let timeAgo = 'Baru saja';
+						if (dateString) {
+							const date = new Date(dateString);
+							const now = new Date();
+							const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+							if (diffInSeconds >= 60) {
+								if (diffInSeconds < 3600) {
+									timeAgo = `${Math.floor(diffInSeconds / 60)} menit yang lalu`;
+								} else if (diffInSeconds < 86400) {
+									timeAgo = `${Math.floor(diffInSeconds / 3600)} jam yang lalu`;
+								} else if (diffInSeconds < 604800) {
+									timeAgo = `${Math.floor(diffInSeconds / 86400)} hari yang lalu`;
+								} else if (diffInSeconds < 2592000) {
+									timeAgo = `${Math.floor(diffInSeconds / 604800)} minggu yang lalu`;
+								} else {
+									timeAgo = `${Math.floor(diffInSeconds / 2592000)} bulan yang lalu`;
+								}
+							}
+						}
+						const categoryName = (article.categories && article.categories.name) ? article.categories.name : 'Umum';
+						const categorySlug = (article.categories && article.categories.slug) ? article.categories.slug : '';
+						const articleUrl = `/artikel/${article.slug}`;
+						const categoryUrl = categorySlug ? `/categories/${categorySlug}` : '';
+						const metaLine = categorySlug ? `${categoryName} | ${timeAgo}` : `${categoryName} | ${timeAgo}`;
+						return (
+							<article class="group bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
+								<div class="flex flex-col sm:flex-row gap-4 sm:gap-6">
+									<a href={articleUrl} class="flex-shrink-0 w-full sm:w-48">
+										{article.thumbnail_url ? (
+											<img
+												src={article.thumbnail_url}
+												alt={article.thumbnail_alt || article.title || 'Article thumbnail'}
+												class="w-full sm:w-48 h-48 sm:h-28 rounded-lg object-cover"
+												loading="lazy"
+												width="192"
+												height="112"
+												decoding="async"
+												fetchpriority="low"
+												sizes="(max-width: 640px) 100vw, 192px"
+												style="aspect-ratio: 192/112"
+											/>
+										) : (
+											<div class="w-full sm:w-48 h-48 sm:h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
+												<svg class="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+												</svg>
+											</div>
+										)}
+									</a>
+									<div class="flex-1 min-w-0">
+										<a href={articleUrl} class="block">
+											<h3 class="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-blue-600 mb-2 leading-tight">{article.title}</h3>
+											<p class="text-sm text-gray-600 mb-3 line-clamp-2 sm:line-clamp-2">{article.summary || 'Tidak ada ringkasan tersedia...'}</p>
+										</a>
+										<p class="text-xs sm:text-sm text-blue-600 font-medium">
+											{categorySlug ? (
+												<>
+													<a href={categoryUrl} class="hover:underline">{categoryName}</a>
+													{' | '}
+													{timeAgo}
+												</>
+											) : (
+												`${metaLine}`
+											)}
+										</p>
+									</div>
+								</div>
+							</article>
+						);
+					})
+				) : (
+					<div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+						<p class="text-gray-500 text-lg">Tidak ada artikel.</p>
+					</div>
+				)}
+			</div>
+
+			{totalPages > 1 && (
+				<nav class="mt-4 sm:mt-8 flex justify-center">
+					<ul class="inline-flex items-center -space-x-px text-sm">
+						<li>
+							<a
+								href={page > 1 ? `?page=${page - 1}` : undefined}
+								class={`px-3 py-2 ml-0 leading-tight border rounded-l-lg ${page <= 1 ? 'text-gray-300 bg-white border-gray-200 cursor-default' : 'text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700'}`}
+							>
+								Sebelumnya
+							</a>
+						</li>
+						{Array.from({ length: totalPages }).map((_, index) => {
+							const pageNumber = index + 1;
+							return (
+								<li>
+									<a
+										href={pageNumber === 1 ? '?' : `?page=${pageNumber}`}
+										class={`px-3 py-2 leading-tight border ${pageNumber === page ? 'z-10 text-blue-600 border-blue-300 bg-blue-50' : 'text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700'}`}
+									>
+										{pageNumber}
+									</a>
+								</li>
+							);
+						})}
+						<li>
+							<a
+								href={page < totalPages ? `?page=${page + 1}` : undefined}
+								class={`px-3 py-2 leading-tight border rounded-r-lg ${page >= totalPages ? 'text-gray-300 bg-white border-gray-200 cursor-default' : 'text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700'}`}
+							>
+								Berikutnya
+							</a>
+						</li>
+					</ul>
+				</nav>
+			)}
 		</div>
 		
 		<!-- Popular News Sidebar -->
