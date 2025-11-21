@@ -93,6 +93,8 @@ function getTimeAgo(dateString: string): string {
                            alt={article.thumbnail_alt || article.title}
                            width={400}
                            height={120}
+                           widths={[320, 400]}
+                           sizes="(max-width: 1024px) 100vw, 400px"
                            class="w-full h-24 object-cover group-hover:scale-105 transition-transform duration-300"
                            loading="eager"
                            format="webp"

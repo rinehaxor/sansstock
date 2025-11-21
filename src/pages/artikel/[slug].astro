@@ -4,6 +4,7 @@ export const prerender = false;
 import { Image } from 'astro:assets';
 import Layout from '../../layouts/Layout.astro';
 import { supabase } from '../../db/supabase';
+import { parse } from 'node-html-parser';
 import PopularNews from '../../components/PopularNews.astro';
 import FeaturedArticles from '../../components/FeaturedArticles.astro';
 import RelatedArticles from '../../components/RelatedArticles.astro';
@@ -194,7 +195,7 @@ function generateBacaJugaHTML(articles: any[]): string {
   }).join('');
   
   return `<div class="baca-juga-widget my-8 px-4 pt-2 pb-3 border border-gray-900 rounded-lg bg-white">
-    <h3 class="text-base font-bold text-gray-900 mb-2">Baca Juga</h3>
+    <h2 class="text-base font-bold text-gray-900 mb-2">Baca Juga</h2>
     <div class="flex gap-0">
       ${articlesHTML}
     </div>
@@ -240,8 +241,60 @@ if (Array.isArray(article.article_tags)) {
 const relatedArticles = await getRelatedArticlesForBacaJuga(article.id, article.category_id, tagIds);
 const bacaJugaHTML = generateBacaJugaHTML(relatedArticles);
 
+// Utility to optimize inline article images
+function optimizeArticleImages(content: string): string {
+  if (!content) return content;
+
+  try {
+    const root = parse(content);
+    const images = root.querySelectorAll('img');
+    images.forEach((img) => {
+      const originalSrc = img.getAttribute('src');
+      if (!originalSrc) return;
+
+      const alreadyOptimized = originalSrc.startsWith('/_image?');
+      const widthAttr = parseInt(img.getAttribute('width') || '', 10);
+      const heightAttr = parseInt(img.getAttribute('height') || '', 10);
+
+      const targetWidth = Number.isFinite(widthAttr) ? Math.min(widthAttr, 1024) : 1024;
+      const targetHeight = Number.isFinite(heightAttr) ? Math.min(heightAttr, 1024) : undefined;
+
+      if (!alreadyOptimized) {
+        const params = new URLSearchParams();
+        params.set('href', originalSrc);
+        params.set('w', String(targetWidth));
+        if (targetHeight) {
+          params.set('h', String(targetHeight));
+        }
+        params.set('q', '75');
+        params.set('f', 'webp');
+        img.setAttribute('src', `/_image?${params.toString()}`);
+      }
+
+      if (!img.getAttribute('loading')) {
+        img.setAttribute('loading', 'lazy');
+      }
+      if (!img.getAttribute('decoding')) {
+        img.setAttribute('decoding', 'async');
+      }
+      if (!img.getAttribute('fetchpriority')) {
+        img.setAttribute('fetchpriority', 'low');
+      }
+      img.classList.add('article-inline-image');
+    });
+
+    return root.toString();
+  } catch (error) {
+    console.error('Failed to optimize article images:', error);
+    return content;
+  }
+}
+
 // Inject widget into content (only once, after 3rd paragraph)
 const contentWithWidget = injectBacaJugaWidget(article.content || '', bacaJugaHTML, 3);
+const optimizedContent = import.meta.env.PROD
+  ? optimizeArticleImages(contentWithWidget)
+  : contentWithWidget;
 
 // Get alt text - prioritize thumbnail_alt from articles table, then media_metadata
 let thumbnailAltText: string | null = null;
@@ -518,9 +571,14 @@ const tags = allKeywords.join(', ') || '';
                   alt={thumbnailAltText || article.title}
                   width={1200}
                   height={675}
+                  widths={[640, 800, 1024, 1200]}
+                  sizes="(max-width: 1024px) 100vw, 800px"
+                  fetchpriority="high"
                   class="w-full h-auto object-cover"
                   loading="eager"
+                  decoding="async"
                   format="webp"
+                  style="aspect-ratio: 1200 / 675;"
                 />
               </div>
             )}
@@ -528,7 +586,7 @@ const tags = allKeywords.join(', ') || '';
 
           {/* Article Content */}
           <div class="prose prose-lg max-w-none bg-white rounded-xl p-8 shadow-sm mb-8">
-            <div set:html={contentWithWidget} />
+            <div set:html={optimizedContent} />
             <ImageDescription />
           </div>
 
@@ -660,6 +718,10 @@ const tags = allKeywords.join(', ') || '';
     margin-bottom: 0;
     border-radius: 0.5rem;
     max-width: 100%;
+    height: auto;
+  }
+  .prose img.article-inline-image {
+    width: 100%;
     height: auto;
   }
   .prose img[data-description] {
