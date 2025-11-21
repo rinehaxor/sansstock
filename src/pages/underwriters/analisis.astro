@@ -3,7 +3,6 @@ export const prerender = false;
 
 import Layout from '../../layouts/Layout.astro';
 import { supabase } from '../../db/supabase';
-import UnderwriterComparison from '../../components/UnderwriterComparison.tsx';
 
 // Fetch underwriters along with IPO listings and performance metrics
 const { data: underwriters, error } = await supabase
@@ -101,6 +100,7 @@ const underwritersWithStats =
   }) || [];
 
 const underwritersList = underwritersWithStats;
+const serializedUnderwriters = JSON.stringify(underwritersList || []);
 ---
 
 <Layout 
@@ -146,10 +146,817 @@ const underwritersList = underwritersWithStats;
 			</div>
 		</div>
 
-		<!-- Comparison Component -->
-        <UnderwriterComparison 
-        	client:only="react"
-        	underwriters={JSON.stringify(underwritersList || [])}
-      />
+		<!-- Comparison Component tanpa React -->
+		<div
+			id="uw-analysis-root"
+			class="space-y-6"
+			data-underwriters={serializedUnderwriters}
+		>
+			<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 sm:p-6">
+				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4">
+					<h2 class="text-lg sm:text-xl font-bold text-gray-900">Pilih Underwriter</h2>
+					<button
+						id="uw-add-slot"
+						type="button"
+						class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center justify-center gap-2"
+					>
+						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+						</svg>
+						<span>Tambah Underwriter</span>
+					</button>
+				</div>
+
+				<div id="uw-slots-container" class="space-y-3 sm:space-y-4"></div>
+
+				<div id="uw-selected-summary" class="mt-4 p-3 bg-blue-50 rounded-lg hidden">
+					<p class="text-xs sm:text-sm text-blue-800">
+						<strong>Underwriter yang dipilih:</strong>
+						<span id="uw-selected-names" class="block sm:inline mt-1 sm:mt-0"></span>
+					</p>
+				</div>
+			</div>
+
+			<div
+				id="uw-loading"
+				class="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center hidden"
+			>
+				<div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+				<p class="text-gray-600 text-lg mt-4">Memuat data performa...</p>
+			</div>
+
+			<div
+				id="uw-error"
+				class="bg-red-50 border border-red-200 rounded-xl p-4 hidden text-red-800"
+			></div>
+
+			<div id="uw-summary" class="hidden"></div>
+			<div id="uw-performance" class="hidden"></div>
+			<div id="uw-ipo-list" class="hidden"></div>
+
+			<div
+				id="uw-empty-state"
+				class="bg-gray-50 border border-gray-200 rounded-xl p-12 text-center hidden"
+			>
+				<svg
+					class="mx-auto h-12 w-12 text-gray-400"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+					/>
+				</svg>
+				<p class="mt-4 text-gray-600">
+					Klik "Tambah Underwriter" dan pilih underwriter untuk melihat analisis performa gabungan
+				</p>
+			</div>
+		</div>
 	</div>
+
+	<script is:inline>
+	(function() {
+		var root = document.getElementById('uw-analysis-root');
+		if (!root) return;
+
+		var raw = root.getAttribute('data-underwriters') || '[]';
+		var underwritersList;
+		try {
+			underwritersList = JSON.parse(raw);
+		} catch (e) {
+			console.error('Error parsing underwriters data', e);
+			underwritersList = [];
+		}
+
+		var selectedUnderwriters = [];
+		var numberOfSlots = 1;
+		var combinedPerformance = null;
+		var isLoading = false;
+
+		var slotsContainer = document.getElementById('uw-slots-container');
+		var addSlotButton = document.getElementById('uw-add-slot');
+		var selectedSummary = document.getElementById('uw-selected-summary');
+		var selectedNamesEl = document.getElementById('uw-selected-names');
+		var loadingEl = document.getElementById('uw-loading');
+		var errorEl = document.getElementById('uw-error');
+		var summaryEl = document.getElementById('uw-summary');
+		var performanceEl = document.getElementById('uw-performance');
+		var ipoListEl = document.getElementById('uw-ipo-list');
+		var emptyStateEl = document.getElementById('uw-empty-state');
+
+		function escapeHtml(text) {
+			return String(text || '')
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;');
+		}
+
+		function getPeriodLabel(periodDays) {
+			if (periodDays === 1) return 'Hari 1';
+			if (periodDays === 7) return 'Minggu 1';
+			if (periodDays === 30) return 'Bulan 1';
+			if (periodDays === 90) return 'Bulan 3';
+			if (periodDays === 180) return 'Bulan 6';
+			if (periodDays === 365) return 'Tahun 1';
+			return periodDays + ' hari';
+		}
+
+		function getPerformanceRating(avg) {
+			if (avg >= 30) {
+				return {
+					label: 'Sangat Bagus',
+					color: 'text-green-700',
+					bgColor: 'bg-green-100',
+					description: 'Performa sangat baik, rata-rata return di atas 30%'
+				};
+			} else if (avg >= 15) {
+				return {
+					label: 'Bagus',
+					color: 'text-green-600',
+					bgColor: 'bg-green-50',
+					description: 'Performa baik, rata-rata return di atas 15%'
+				};
+			} else if (avg >= 5) {
+				return {
+					label: 'Cukup',
+					color: 'text-yellow-600',
+					bgColor: 'bg-yellow-50',
+					description: 'Performa cukup, rata-rata return di atas 5%'
+				};
+			} else if (avg >= 0) {
+				return {
+					label: 'Rendah',
+					color: 'text-orange-600',
+					bgColor: 'bg-orange-50',
+					description: 'Performa rendah, rata-rata return positif tapi kecil'
+				};
+			} else {
+				return {
+					label: 'Buruk',
+					color: 'text-red-600',
+					bgColor: 'bg-red-50',
+					description: 'Performa buruk, rata-rata return negatif'
+				};
+			}
+		}
+
+		function setLoading(value) {
+			isLoading = !!value;
+			if (!loadingEl) return;
+			if (isLoading) {
+				loadingEl.classList.remove('hidden');
+			} else {
+				loadingEl.classList.add('hidden');
+			}
+		}
+
+		function clearError() {
+			if (!errorEl) return;
+			errorEl.textContent = '';
+			errorEl.classList.add('hidden');
+		}
+
+		function showError(message) {
+			if (!errorEl) return;
+			errorEl.textContent = message || 'Terjadi kesalahan saat menghitung data performa.';
+			errorEl.classList.remove('hidden');
+		}
+
+		function findUnderwriterById(id) {
+			for (var i = 0; i < underwritersList.length; i++) {
+				if (underwritersList[i] && underwritersList[i].id === id) {
+					return underwritersList[i];
+				}
+			}
+			return null;
+		}
+
+		function updateSelectedSummary() {
+			if (!selectedSummary || !selectedNamesEl) return;
+			var active = selectedUnderwriters.filter(function(id) { return id > 0; });
+			if (!active.length) {
+				selectedSummary.classList.add('hidden');
+				selectedNamesEl.textContent = '';
+				return;
+			}
+
+			var names = [];
+			for (var i = 0; i < active.length; i++) {
+				var uw = findUnderwriterById(active[i]);
+				if (uw && uw.name) {
+					names.push(uw.name);
+				}
+			}
+			selectedNamesEl.textContent = names.join(', ');
+			selectedSummary.classList.remove('hidden');
+		}
+
+		function renderSlots() {
+			if (!slotsContainer) return;
+			slotsContainer.innerHTML = '';
+
+			for (var i = 0; i < numberOfSlots; i++) {
+				(function(slotIndex) {
+					var wrapper = document.createElement('div');
+					wrapper.className = 'flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3';
+
+					var label = document.createElement('label');
+					label.className = 'w-full sm:w-32 text-sm font-medium text-gray-700 flex-shrink-0';
+					label.textContent = 'Underwriter ' + (slotIndex + 1) + ':';
+					wrapper.appendChild(label);
+
+					var inner = document.createElement('div');
+					inner.className = 'flex-1 flex items-stretch sm:items-center gap-2 min-w-0';
+
+					var select = document.createElement('select');
+					select.className = 'flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm';
+					if (isLoading) {
+						select.setAttribute('disabled', 'true');
+					}
+
+					var optionEmpty = document.createElement('option');
+					optionEmpty.value = '';
+					optionEmpty.textContent = '-- Pilih Underwriter --';
+					select.appendChild(optionEmpty);
+
+					var currentId = selectedUnderwriters[slotIndex] || 0;
+
+					for (var k = 0; k < underwritersList.length; k++) {
+						var uw = underwritersList[k];
+						if (!uw || !uw.id) continue;
+
+						var alreadySelected = false;
+						for (var s = 0; s < selectedUnderwriters.length; s++) {
+							if (s !== slotIndex && selectedUnderwriters[s] === uw.id) {
+								alreadySelected = true;
+								break;
+							}
+						}
+						if (alreadySelected && uw.id !== currentId) continue;
+
+						var opt = document.createElement('option');
+						opt.value = String(uw.id);
+						opt.textContent = uw.name || '';
+						select.appendChild(opt);
+					}
+
+					if (currentId) {
+						select.value = String(currentId);
+					}
+
+					select.addEventListener('change', function(e) {
+						var value = e.target.value || '';
+						handleUnderwriterChange(slotIndex, value);
+					});
+
+					inner.appendChild(select);
+
+					var hasValue = !!currentId;
+					if (hasValue) {
+						var removeBtn = document.createElement('button');
+						removeBtn.type = 'button';
+						removeBtn.className = 'px-3 sm:px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors whitespace-nowrap flex-shrink-0 shadow-sm min-w-[70px]';
+						removeBtn.title = 'Hapus underwriter ini';
+						removeBtn.textContent = 'Hapus';
+						removeBtn.addEventListener('click', function() {
+							removeUnderwriter(slotIndex);
+						});
+						inner.appendChild(removeBtn);
+					} else if (numberOfSlots > 1) {
+						var removeSlotBtn = document.createElement('button');
+						removeSlotBtn.type = 'button';
+						removeSlotBtn.className = 'px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 border border-gray-300 min-w-[44px] flex items-center justify-center';
+						removeSlotBtn.title = 'Hapus slot ini';
+						removeSlotBtn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
+						removeSlotBtn.addEventListener('click', function() {
+							removeUnderwriterSlot(slotIndex);
+						});
+						inner.appendChild(removeSlotBtn);
+					}
+
+					wrapper.appendChild(inner);
+					slotsContainer.appendChild(wrapper);
+				})(i);
+			}
+		}
+
+		function calculateCombinedPerformance(activeIds) {
+			if (!activeIds || !activeIds.length) {
+				combinedPerformance = null;
+				renderResults();
+				return;
+			}
+
+			setLoading(true);
+			clearError();
+
+			try {
+				var selectedData = [];
+				for (var i = 0; i < activeIds.length; i++) {
+					var uw = findUnderwriterById(activeIds[i]);
+					if (uw) selectedData.push(uw);
+				}
+
+				if (!selectedData.length) {
+					combinedPerformance = null;
+					setLoading(false);
+					return;
+				}
+
+				var combinedPerformanceByPeriod = {};
+				var allPeriods = {};
+
+				for (var u = 0; u < selectedData.length; u++) {
+					var perfByPeriod = selectedData[u].performance_by_period || {};
+					for (var key in perfByPeriod) {
+						if (Object.prototype.hasOwnProperty.call(perfByPeriod, key)) {
+							allPeriods[key] = true;
+						}
+					}
+				}
+
+				for (var periodKey in allPeriods) {
+					if (!Object.prototype.hasOwnProperty.call(allPeriods, periodKey)) continue;
+					var period = parseInt(periodKey, 10);
+					var perfs = [];
+					for (var u2 = 0; u2 < selectedData.length; u2++) {
+						var perf = selectedData[u2].performance_by_period && selectedData[u2].performance_by_period[period];
+						if (perf) perfs.push(perf);
+					}
+					if (!perfs.length) continue;
+
+					var sumAvg = 0;
+					var min = perfs[0].min;
+					var max = perfs[0].max;
+					var count = 0;
+					for (var p = 0; p < perfs.length; p++) {
+						var perfItem = perfs[p];
+						sumAvg += perfItem.avg;
+						if (perfItem.min < min) min = perfItem.min;
+						if (perfItem.max > max) max = perfItem.max;
+						count += perfItem.count || 0;
+					}
+
+					var avg = sumAvg / perfs.length;
+					combinedPerformanceByPeriod[period] = {
+						avg: parseFloat(avg.toFixed(2)),
+						min: min,
+						max: max,
+						count: count,
+					};
+				}
+
+				var ipoMap = {};
+				for (var u3 = 0; u3 < selectedData.length; u3++) {
+					var listings = selectedData[u3].ipo_listings || [];
+					for (var l = 0; l < listings.length; l++) {
+						var ipo = listings[l];
+						if (!ipo || !ipo.id) continue;
+
+						if (!ipoMap[ipo.id]) {
+							ipoMap[ipo.id] = {
+								id: ipo.id,
+								ticker_symbol: ipo.ticker_symbol,
+								company_name: ipo.company_name,
+								ipo_date: ipo.ipo_date,
+								ipo_price: ipo.ipo_price,
+								underwriters: (ipo.underwriters || []).slice(),
+							};
+						} else {
+							var existing = ipoMap[ipo.id];
+							var existingUws = existing.underwriters || [];
+							var newUws = ipo.underwriters || [];
+							for (var nu = 0; nu < newUws.length; nu++) {
+								var uwData = newUws[nu];
+								var found = false;
+								for (var eu = 0; eu < existingUws.length; eu++) {
+									if (existingUws[eu].id === uwData.id) {
+										found = true;
+										break;
+									}
+								}
+								if (!found) existingUws.push(uwData);
+							}
+							existing.underwriters = existingUws;
+						}
+					}
+				}
+
+				var ipoList = Object.keys(ipoMap)
+					.map(function(key) { return ipoMap[key]; })
+					.sort(function(a, b) {
+						return new Date(b.ipo_date).getTime() - new Date(a.ipo_date).getTime();
+					});
+
+				combinedPerformance = {
+					total_ipos: ipoList.length,
+					performance_by_period: combinedPerformanceByPeriod,
+					ipo_listings: ipoList,
+				};
+
+			} catch (e) {
+				console.error('Error calculating combined performance', e);
+				combinedPerformance = null;
+				showError('Gagal menghitung data performa.');
+			} finally {
+				setLoading(false);
+				renderResults();
+			}
+		}
+
+		function handleUnderwriterChange(index, value) {
+			var newSelected = selectedUnderwriters.slice();
+			var selectedId = value ? parseInt(value, 10) : null;
+
+			while (newSelected.length < numberOfSlots) {
+				newSelected.push(0);
+			}
+
+			if (selectedId) {
+				newSelected[index] = selectedId;
+			} else {
+				newSelected[index] = 0;
+			}
+
+			if (selectedId) {
+				for (var i = 0; i < newSelected.length; i++) {
+					if (i !== index && newSelected[i] === selectedId) {
+						newSelected[i] = 0;
+					}
+				}
+			}
+
+			selectedUnderwriters = newSelected;
+			updateSelectedSummary();
+
+			var active = newSelected.filter(function(id) { return id > 0; });
+			if (active.length) {
+				calculateCombinedPerformance(active);
+			} else {
+				combinedPerformance = null;
+				renderResults();
+			}
+		}
+
+		function addUnderwriterSlot() {
+			numberOfSlots += 1;
+			renderSlots();
+		}
+
+		function removeUnderwriterSlot(index) {
+			var newSelected = [];
+			for (var i = 0; i < selectedUnderwriters.length; i++) {
+				if (i < index) {
+					newSelected[i] = selectedUnderwriters[i] || 0;
+				} else if (i > index) {
+					newSelected[i - 1] = selectedUnderwriters[i] || 0;
+				}
+			}
+			selectedUnderwriters = newSelected;
+
+			if (numberOfSlots > 1) {
+				numberOfSlots -= 1;
+			}
+
+			var active = newSelected.filter(function(id) { return id > 0; });
+			if (active.length) {
+				calculateCombinedPerformance(active);
+			} else {
+				combinedPerformance = null;
+			}
+
+			renderSlots();
+		}
+
+		function removeUnderwriter(index) {
+			while (selectedUnderwriters.length <= index) {
+				selectedUnderwriters.push(0);
+			}
+			selectedUnderwriters[index] = 0;
+
+			var active = selectedUnderwriters.filter(function(id) { return id > 0; });
+			if (!active.length && numberOfSlots > 1) {
+				numberOfSlots = 1;
+				selectedUnderwriters = [];
+			}
+
+			updateSelectedSummary();
+
+			if (active.length) {
+				calculateCombinedPerformance(active);
+			} else {
+				combinedPerformance = null;
+				renderResults();
+			}
+
+			renderSlots();
+		}
+
+		function renderSummary() {
+			if (!summaryEl) return;
+			if (!combinedPerformance) {
+				summaryEl.innerHTML = '';
+				summaryEl.classList.add('hidden');
+				return;
+			}
+
+			var periods = Object.keys(combinedPerformance.performance_by_period || {})
+				.map(function(p) { return parseInt(p, 10); })
+				.sort(function(a, b) { return a - b; });
+
+			if (!periods.length) {
+				summaryEl.innerHTML = '';
+				summaryEl.classList.add('hidden');
+				return;
+			}
+
+			var firstPeriod = periods[0];
+			var firstPerf = combinedPerformance.performance_by_period[firstPeriod];
+			if (!firstPerf) {
+				summaryEl.innerHTML = '';
+				summaryEl.classList.add('hidden');
+				return;
+			}
+
+			var rating = getPerformanceRating(firstPerf.avg);
+
+			var html = '';
+			html += '<div class="grid grid-cols-1 md:grid-cols-4 gap-4">';
+			html += '<div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">';
+			html += '<div class="text-sm font-medium text-gray-500 mb-1">Total IPO</div>';
+			html += '<div class="text-3xl font-bold text-gray-900">' + combinedPerformance.total_ipos + '</div>';
+			html += '<div class="text-xs text-gray-500 mt-1">Semua IPO dari underwriter yang dipilih</div>';
+			html += '</div>';
+
+			html += '<div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">';
+			html += '<div class="text-sm font-medium text-gray-500 mb-1">Rata-rata Performa</div>';
+			html += '<div class="text-3xl font-bold ' + (firstPerf.avg >= 0 ? 'text-green-600' : 'text-red-600') + '">';
+			html += (firstPerf.avg >= 0 ? '+' : '') + firstPerf.avg.toFixed(2) + '%';
+			html += '</div>';
+			html += '<div class="text-xs text-gray-500 mt-1">' + escapeHtml(getPeriodLabel(firstPeriod)) + '</div>';
+			html += '</div>';
+
+			if (rating) {
+				html += '<div class="rounded-xl p-6 border-2 ' + rating.bgColor + ' border-gray-200 shadow-sm">';
+				html += '<div class="text-sm font-medium text-gray-500 mb-1">Rating Performa</div>';
+				html += '<div class="text-2xl font-bold ' + rating.color + ' mb-1">' + escapeHtml(rating.label) + '</div>';
+				html += '<div class="text-xs text-gray-600">' + escapeHtml(rating.description) + '</div>';
+				html += '</div>';
+			}
+
+			html += '<div class="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">';
+			html += '<div class="text-sm font-medium text-gray-500 mb-1">Periode Tersedia</div>';
+			html += '<div class="text-3xl font-bold text-gray-900">' + periods.length + '</div>';
+			html += '<div class="text-xs text-gray-500 mt-1">Periode analisis</div>';
+			html += '</div>';
+
+			html += '</div>';
+
+			summaryEl.innerHTML = html;
+			summaryEl.classList.remove('hidden');
+		}
+
+		function renderPerformanceTable() {
+			if (!performanceEl) return;
+			if (!combinedPerformance) {
+				performanceEl.innerHTML = '';
+				performanceEl.classList.add('hidden');
+				return;
+			}
+
+			var periods = Object.keys(combinedPerformance.performance_by_period || {})
+				.map(function(p) { return parseInt(p, 10); })
+				.sort(function(a, b) { return a - b; });
+
+			if (!periods.length) {
+				performanceEl.innerHTML = '';
+				performanceEl.classList.add('hidden');
+				return;
+			}
+
+			var html = '';
+			html += '<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">';
+			html += '<h2 class="text-xl font-bold text-gray-900 mb-4">Rincian Performa per Periode</h2>';
+			html += '<div class="overflow-x-auto">';
+			html += '<table class="min-w-full divide-y divide-gray-200">';
+			html += '<thead class="bg-gray-50">';
+			html += '<tr>';
+			html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Periode</th>';
+			html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rata-rata</th>';
+			html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Minimum</th>';
+			html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Maksimum</th>';
+			html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah Data</th>';
+			html += '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>';
+			html += '</tr>';
+			html += '</thead>';
+			html += '<tbody class="bg-white divide-y divide-gray-200">';
+
+			for (var i = 0; i < periods.length; i++) {
+				var period = periods[i];
+				var perf = combinedPerformance.performance_by_period[period];
+				if (!perf) continue;
+
+				var rating = getPerformanceRating(perf.avg);
+
+				html += '<tr class="hover:bg-gray-50">';
+				html += '<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">' + escapeHtml(getPeriodLabel(period)) + '</td>';
+				html += '<td class="px-4 py-3 whitespace-nowrap text-sm font-semibold ' + (perf.avg >= 0 ? 'text-green-600' : 'text-red-600') + '">';
+				html += (perf.avg >= 0 ? '+' : '') + perf.avg.toFixed(2) + '%';
+				html += '</td>';
+				html += '<td class="px-4 py-3 whitespace-nowrap text-sm ' + (perf.min >= 0 ? 'text-green-600' : 'text-red-600') + '">';
+				html += (perf.min >= 0 ? '+' : '') + perf.min.toFixed(2) + '%';
+				html += '</td>';
+				html += '<td class="px-4 py-3 whitespace-nowrap text-sm ' + (perf.max >= 0 ? 'text-green-600' : 'text-red-600') + '">';
+				html += (perf.max >= 0 ? '+' : '') + perf.max.toFixed(2) + '%';
+				html += '</td>';
+				html += '<td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">' + perf.count + ' IPO</td>';
+				html += '<td class="px-4 py-3 whitespace-nowrap">';
+				html += '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' + rating.bgColor + ' ' + rating.color + '">';
+				html += escapeHtml(rating.label);
+				html += '</span>';
+				html += '</td>';
+				html += '</tr>';
+			}
+
+			html += '</tbody>';
+			html += '</table>';
+			html += '</div>';
+			html += '</div>';
+
+			performanceEl.innerHTML = html;
+			performanceEl.classList.remove('hidden');
+		}
+
+		function renderIpoList() {
+			if (!ipoListEl) return;
+			if (!combinedPerformance || !combinedPerformance.ipo_listings || !combinedPerformance.ipo_listings.length) {
+				ipoListEl.innerHTML = '';
+				ipoListEl.classList.add('hidden');
+				return;
+			}
+
+			var list = combinedPerformance.ipo_listings.slice().sort(function(a, b) {
+				return new Date(b.ipo_date).getTime() - new Date(a.ipo_date).getTime();
+			});
+
+			var html = '';
+			html += '<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">';
+			html += '<h2 class="text-xl font-bold text-gray-900 mb-4">Daftar IPO dari Semua Underwriter (' + list.length + ')</h2>';
+			html += '<div class="overflow-x-auto -mx-4 sm:mx-0">';
+			html += '<div class="inline-block min-w-full align-middle px-4 sm:px-0">';
+			html += '<table class="min-w-full divide-y divide-gray-200">';
+			html += '<thead class="bg-gray-50">';
+			html += '<tr>';
+			html += '<th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Ticker</th>';
+			html += '<th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Perusahaan</th>';
+			html += '<th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Tanggal IPO</th>';
+			html += '<th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Harga IPO</th>';
+			html += '<th class="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-medium text-gray-500 uppercase tracking-wider">Underwriter</th>';
+			html += '</tr>';
+			html += '</thead>';
+			html += '<tbody class="bg-white divide-y divide-gray-200">';
+
+			for (var i = 0; i < list.length; i++) {
+				var ipo = list[i];
+				var uws = ipo.underwriters || [];
+
+				html += '<tr class="hover:bg-gray-50">';
+				html += '<td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">' + escapeHtml(ipo.ticker_symbol || '') + '</td>';
+				html += '<td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 truncate max-w-[150px] sm:max-w-none">' + escapeHtml(ipo.company_name || '') + '</td>';
+				html += '<td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">' + new Date(ipo.ipo_date).toLocaleDateString('id-ID') + '</td>';
+				html += '<td class="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500">';
+				if (ipo.ipo_price) {
+					html += 'Rp ' + Number(ipo.ipo_price).toLocaleString('id-ID');
+				} else {
+					html += '-';
+				}
+				html += '</td>';
+				html += '<td class="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-600">';
+
+				if (!uws.length) {
+					html += '<span class="text-gray-400">-</span>';
+				} else if (uws.length === 1) {
+					html += '<span class="truncate block max-w-[150px] sm:max-w-none">' + escapeHtml(uws[0].name || '') + '</span>';
+				} else {
+					html += '<div class="flex items-center gap-1 sm:gap-2 flex-wrap">';
+					html += '<span class="truncate max-w-[100px] sm:max-w-none">' + escapeHtml(uws[0].name || '') + '</span>';
+					html += '<button type="button" data-ipo-index="' + i + '" class="uw-open-modal text-blue-600 hover:text-blue-700 text-[10px] sm:text-xs font-medium underline whitespace-nowrap">+' + (uws.length - 1) + ' lainnya</button>';
+					html += '</div>';
+				}
+
+				html += '</td>';
+				html += '</tr>';
+			}
+
+			html += '</tbody>';
+			html += '</table>';
+			html += '</div></div></div>';
+
+			ipoListEl.innerHTML = html;
+			ipoListEl.classList.remove('hidden');
+
+			var buttons = ipoListEl.querySelectorAll('.uw-open-modal');
+			for (var b = 0; b < buttons.length; b++) {
+				buttons[b].addEventListener('click', function(e) {
+					var indexStr = e.currentTarget && e.currentTarget.getAttribute('data-ipo-index');
+					var idx = indexStr ? parseInt(indexStr, 10) : -1;
+					if (idx >= 0 && idx < list.length) {
+						openModalForIPO(list[idx]);
+					}
+				});
+			}
+		}
+
+		function renderEmptyState() {
+			if (!emptyStateEl) return;
+			if (combinedPerformance || !selectedUnderwriters.filter(function(id) { return id > 0; }).length) {
+				if (combinedPerformance) {
+					emptyStateEl.classList.add('hidden');
+				}
+				return;
+			}
+
+			emptyStateEl.classList.remove('hidden');
+		}
+
+		function renderResults() {
+			if (!selectedUnderwriters.filter(function(id) { return id > 0; }).length) {
+				if (summaryEl) { summaryEl.innerHTML = ''; summaryEl.classList.add('hidden'); }
+				if (performanceEl) { performanceEl.innerHTML = ''; performanceEl.classList.add('hidden'); }
+				if (ipoListEl) { ipoListEl.innerHTML = ''; ipoListEl.classList.add('hidden'); }
+				emptyStateEl && emptyStateEl.classList.remove('hidden');
+				return;
+			}
+
+			emptyStateEl && emptyStateEl.classList.add('hidden');
+			renderSummary();
+			renderPerformanceTable();
+			renderIpoList();
+		}
+
+		function openModalForIPO(ipo) {
+			if (!modalBackdrop || !modalTitle || !modalCompany || !modalDate || !modalList) return;
+
+			modalTitle.textContent = 'Underwriter - ' + (ipo.ticker_symbol || '');
+			modalCompany.textContent = ipo.company_name || '';
+			modalDate.textContent = 'Tanggal IPO: ' + new Date(ipo.ipo_date).toLocaleDateString('id-ID');
+
+			var uws = ipo.underwriters || [];
+			var html = '';
+			if (!uws.length) {
+				html = '<li class="text-sm text-gray-400">Tidak ada data underwriter</li>';
+			} else {
+				for (var i = 0; i < uws.length; i++) {
+					var uw = uws[i];
+					html += '<li class="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">';
+					html += '<div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">';
+					html += '<span class="text-blue-600 font-semibold text-sm">' + (i + 1) + '</span>';
+					html += '</div>';
+					html += '<span class="text-sm text-gray-900">' + escapeHtml(uw.name || '') + '</span>';
+					html += '</li>';
+				}
+			}
+
+			modalList.innerHTML = html;
+			modalBackdrop.classList.remove('hidden');
+		}
+
+		function closeModal() {
+			if (!modalBackdrop) return;
+			modalBackdrop.classList.add('hidden');
+		}
+
+		if (modalBackdrop) {
+			modalBackdrop.addEventListener('click', function(e) {
+				if (e.target === modalBackdrop) {
+					closeModal();
+				}
+			});
+		}
+		if (modalClose) {
+			modalClose.addEventListener('click', closeModal);
+		}
+		if (modalCloseFooter) {
+			modalCloseFooter.addEventListener('click', closeModal);
+		}
+
+		if (addSlotButton) {
+			addSlotButton.addEventListener('click', function() {
+				addUnderwriterSlot();
+			});
+		}
+
+		// init slots
+		renderSlots();
+		updateSelectedSummary();
+		renderResults();
+	})();
+	</script>
+
 </Layout>
