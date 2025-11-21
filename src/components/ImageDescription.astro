@@ -1,0 +1,62 @@
+---
+---
+<script is:inline>
+  (function () {
+    if (typeof window === 'undefined') return;
+
+    const addImageDescriptions = () => {
+      const prose = document.querySelector('.prose');
+      if (!prose) return;
+
+      const images = prose.querySelectorAll('img[data-description]');
+      images.forEach((img) => {
+        const imgElement = img;
+        const description = imgElement.getAttribute('data-description');
+        if (!description) return;
+
+        const existingDesc = imgElement.nextElementSibling;
+        if (existingDesc && existingDesc.classList.contains('image-description')) {
+          existingDesc.textContent = description;
+          return;
+        }
+
+        const descElement = document.createElement('div');
+        descElement.className = 'image-description';
+        descElement.textContent = description;
+        descElement.style.marginTop = '-0.5em';
+        descElement.style.paddingTop = '0';
+        descElement.style.paddingBottom = '0.5em';
+        descElement.style.borderBottom = '1px solid #e5e7eb';
+        descElement.style.fontSize = '12px';
+        descElement.style.lineHeight = '1.2';
+        descElement.style.color = '#6b7280';
+
+        const parent = imgElement.parentElement;
+        if (parent && parent.tagName === 'P') {
+          parent.style.marginBottom = '0';
+        }
+
+        const nextSibling = imgElement.nextSibling;
+        if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE && nextSibling.textContent?.trim() === '') {
+          imgElement.parentNode?.removeChild(nextSibling);
+        }
+        imgElement.parentNode?.insertBefore(descElement, imgElement.nextSibling);
+      });
+    };
+
+    const scheduleRun = () => {
+      addImageDescriptions();
+      setTimeout(addImageDescriptions, 100);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', scheduleRun, { once: true });
+    } else {
+      scheduleRun();
+    }
+
+    document.addEventListener('astro:page-load', scheduleRun);
+    document.addEventListener('astro:after-swap', scheduleRun);
+  })();
+</script>
+
