@@ -151,6 +151,42 @@ const siteUrl = import.meta.env.SITE_URL || Astro.site?.href || (Astro.url ? `${
 const pageTitle = 'EmitenHub - Berita Ekonomi & Analisis Pasar Terpercaya';
 const pageDescription = 'Portal berita ekonomi, saham, dan analisis pasar terpercaya. Dapatkan insight terbaru tentang pasar modal Indonesia, analisis saham, dan berita ekonomi terkini.';
 const pageImage = `${siteUrl}/logo.png`;
+
+// Generate LCP image preload URL for featured article
+// Skip preload untuk external images (Unsplash) karena tidak bisa di-optimize via _image
+function getLCPPreloadUrl(thumbnailUrl: string | null | undefined): string | null {
+	if (!thumbnailUrl) return null;
+	
+	// Skip preload untuk external images (Unsplash, dll) untuk avoid 403 errors
+	try {
+		const url = new URL(thumbnailUrl);
+		const isSupabase = url.hostname.includes('supabase.co') || url.hostname.includes('supabase.storage');
+		if (!isSupabase) {
+			// Tidak preload external images karena tidak bisa di-optimize
+			return null;
+		}
+	} catch {
+		// Invalid URL, skip preload
+		return null;
+	}
+	
+	// Hanya preload Supabase images
+	try {
+		const params = new URLSearchParams();
+		params.set('href', encodeURI(thumbnailUrl));
+		params.set('w', '800');
+		params.set('h', '343');
+		params.set('q', '75');
+		params.set('f', 'webp');
+		return `/_image?${params.toString()}`;
+	} catch {
+		return null;
+	}
+}
+
+const lcpImageUrl = featuredArticlesWithAlt && featuredArticlesWithAlt.length > 0
+	? getLCPPreloadUrl(featuredArticlesWithAlt[0].thumbnail_url)
+	: null;
 ---
 
 <Layout 
@@ -159,6 +195,16 @@ const pageImage = `${siteUrl}/logo.png`;
 	keywords="berita ekonomi, saham, pasar modal, analisis finansial, investasi, IHSG, rupiah, ekonomi Indonesia"
 >
 	<Fragment slot="head">
+		{/* Preload LCP image for faster rendering */}
+		{lcpImageUrl && (
+			<link rel="preload" as="image" href={lcpImageUrl} fetchpriority="high" />
+		)}
+		
+		{/* Preload initial category articles API request */}
+		{availableCategories && availableCategories.length > 0 && (
+			<link rel="prefetch" href={`/api/articles?category_id=${availableCategories[0].id}&status=published&limit=4`} as="fetch" crossorigin="anonymous" />
+		)}
+		
 		{/* Robots Meta */}
 		<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 		<meta name="googlebot" content="index, follow" />
@@ -293,7 +339,7 @@ const pageImage = `${siteUrl}/logo.png`;
 			</div>
 		</div>
 
-		<div id="category-articles" class="mt-0">
+		<div id="category-articles" class="mt-0" style="min-height: 400px;">
 			<div class="flex items-center justify-center py-12">
 				<div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
 				<p class="ml-3 text-gray-600 text-sm sm:text-base">Memuat artikel...</p>
@@ -419,8 +465,23 @@ const pageImage = `${siteUrl}/logo.png`;
 						if (!url) return null;
 						if (url.startsWith('/_image?')) return url;
 						if (url.startsWith('/')) return url;
+						
+						// Skip optimization untuk external images (Unsplash, dll) untuk avoid 403 errors
+						try {
+							var urlObj = new URL(url);
+							var isSupabase = urlObj.hostname.includes('supabase.co') || urlObj.hostname.includes('supabase.storage');
+							if (!isSupabase) {
+								// Return original URL untuk external images
+								return url;
+							}
+						} catch (e) {
+							// Invalid URL, return as-is
+							return url;
+						}
+						
+						// Hanya optimize Supabase images
 						var params = new URLSearchParams();
-						params.set('href', url);
+						params.set('href', encodeURI(url));
 						params.set('w', String(width || 192));
 						if (height) params.set('h', String(height));
 						params.set('q', '75');
@@ -516,8 +577,26 @@ const pageImage = `${siteUrl}/logo.png`;
 			});
 		});
 
+		// Defer initial fetch to avoid blocking critical rendering
+		// Use requestIdleCallback if available, otherwise setTimeout
+		function scheduleInitialFetch() {
+			if (typeof requestIdleCallback !== 'undefined') {
+				requestIdleCallback(function() {
+					if (activeCategoryId) {
+						fetchArticles(activeCategoryId);
+					}
+				}, { timeout: 2000 });
+			} else {
+				setTimeout(function() {
+					if (activeCategoryId) {
+						fetchArticles(activeCategoryId);
+					}
+				}, 100);
+			}
+		}
+		
 		if (activeCategoryId) {
-			fetchArticles(activeCategoryId);
+			scheduleInitialFetch();
 		}
 	})();
 	</script>

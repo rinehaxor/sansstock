@@ -35,6 +35,7 @@ const {
 		<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link rel="preconnect" href="https://aitfpijkletoyuxujmnc.supabase.co" crossorigin>
+		<link rel="preconnect" href={Astro.url.origin} crossorigin>
 		<link rel="dns-prefetch" href="https://aitfpijkletoyuxujmnc.supabase.co" />
 		<link rel="dns-prefetch" href="https://supabase.co" />
 		<link rel="dns-prefetch" href="https://connect.facebook.net" />
@@ -43,29 +44,9 @@ const {
 		<link rel="dns-prefetch" href="https://static.cloudflareinsights.com" />
 		<!-- Jangan preconnect ke pintu.co.id - akan di-load lazy -->
 		
-		<!-- Defer font CSS loading untuk prevent render blocking -->
-		<!-- Load font CSS asynchronously setelah page load -->
-		<script is:inline>
-			(function() {
-				// Load font CSS setelah page load untuk prevent render blocking
-				function loadFontCSS() {
-					var link = document.createElement('link');
-					link.rel = 'stylesheet';
-					link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=optional';
-					link.media = 'print';
-					link.onload = function() { this.media = 'all'; };
-					document.head.appendChild(link);
-				}
-				
-				// Load setelah DOM ready atau immediately jika sudah ready
-				if (document.readyState === 'loading') {
-					document.addEventListener('DOMContentLoaded', loadFontCSS);
-				} else {
-					// DOM sudah ready, load setelah short delay untuk tidak block render
-					setTimeout(loadFontCSS, 0);
-				}
-			})();
-		</script>
+		<!-- Load font CSS with font-display: optional to prevent CLS -->
+		<!-- Use media="print" trick to load asynchronously, then switch to "all" -->
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=optional" media="print" onload="this.media='all'">
 		<noscript>
 			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=optional">
 		</noscript>
@@ -75,6 +56,21 @@ const {
 			// Defer CSS loading untuk non-critical CSS
 			// Run immediately untuk catch Astro-injected CSS before render
 			(function() {
+				// Function to defer a CSS link
+				function deferCSSLink(link) {
+					if (link.hasAttribute('data-deferred')) return;
+					link.setAttribute('media', 'print');
+					link.setAttribute('onload', "this.media='all';this.setAttribute('data-deferred','true')");
+					link.setAttribute('data-deferred', 'true');
+					// Fallback for browsers that don't support onload
+					if (!link.onload) {
+						link.onload = function() {
+							this.media = 'all';
+							this.setAttribute('data-deferred', 'true');
+						};
+					}
+				}
+				
 				// Intercept link elements before they block render
 				const observer = new MutationObserver(function(mutations) {
 					mutations.forEach(function(mutation) {
@@ -83,41 +79,42 @@ const {
 								const href = node.getAttribute('href');
 								// Defer vendor CSS (non-critical)
 								if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
-									node.setAttribute('media', 'print');
-									node.setAttribute('onload', "this.media='all'");
-									// Fallback
-									const noscript = document.createElement('noscript');
-									const clone = node.cloneNode(true);
-									clone.removeAttribute('media');
-									clone.removeAttribute('onload');
-									noscript.appendChild(clone);
-									node.parentNode.insertBefore(noscript, node.nextSibling);
+									deferCSSLink(node);
 								}
 							}
 						});
 					});
 				});
 				
-				// Start observing before DOM is ready
-				observer.observe(document.head, { childList: true, subtree: true });
+				// Start observing immediately, before DOM is ready
+				if (document.head) {
+					observer.observe(document.head, { childList: true, subtree: true });
+				} else {
+					// If head doesn't exist yet, wait for it
+					const headObserver = new MutationObserver(function() {
+						if (document.head) {
+							observer.observe(document.head, { childList: true, subtree: true });
+							headObserver.disconnect();
+						}
+					});
+					headObserver.observe(document.documentElement, { childList: true });
+				}
 				
-				// Also handle existing links
+				// Also handle existing links immediately
 				function deferExistingCSS() {
+					if (!document.head) return;
 					document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
 						const href = link.getAttribute('href');
-						if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk')) && !link.hasAttribute('data-deferred')) {
-							link.setAttribute('media', 'print');
-							link.setAttribute('onload', "this.media='all';this.setAttribute('data-deferred','true')");
-							link.setAttribute('data-deferred', 'true');
+						if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
+							deferCSSLink(link);
 						}
 					});
 				}
 				
-				// Run immediately
+				// Run immediately and also on DOMContentLoaded
+				deferExistingCSS();
 				if (document.readyState === 'loading') {
 					document.addEventListener('DOMContentLoaded', deferExistingCSS);
-				} else {
-					deferExistingCSS();
 				}
 			})();
 		</script>
@@ -130,7 +127,7 @@ const {
 		<link rel="manifest" href="/site.webmanifest" />
 		<slot name="head" />
 	</head>
-	<body class="bg-gray-50 text-gray-900 font-sans antialiased">
+	<body class="bg-gray-50 text-gray-900 font-sans antialiased" style="min-height: 100vh;">
 		<Header />
 		<main class="min-h-screen">
 			<slot />
@@ -158,12 +155,23 @@ const {
 				}
 			})();
 			
-			// Detect font load untuk prevent CLS
+			// Detect font load untuk prevent CLS - run immediately
 			(function() {
+				// Check if fonts are already loaded
 				if ('fonts' in document) {
-					document.fonts.ready.then(function() {
+					if (document.fonts.status === 'loaded') {
 						document.documentElement.classList.add('fonts-loaded');
-					});
+					} else {
+						// Wait for fonts to load
+						document.fonts.ready.then(function() {
+							document.documentElement.classList.add('fonts-loaded');
+						}).catch(function() {
+							// Fallback if fonts fail to load
+							setTimeout(function() {
+								document.documentElement.classList.add('fonts-loaded');
+							}, 100);
+						});
+					}
 				} else {
 					// Fallback: assume fonts loaded after short delay
 					setTimeout(function() {
