@@ -20,13 +20,7 @@ export default defineConfig({
    integrations: [tailwind(), react(), sitemap()],
    image: {
       // Allow images from Supabase storage and other trusted sources
-      domains: [
-         'localhost',
-         'supabase.co',
-         '*.supabase.co',
-         'aitfpijkletoyuxujmnc.supabase.co',
-         'images.unsplash.com',
-      ],
+      domains: ['localhost', 'supabase.co', '*.supabase.co', 'aitfpijkletoyuxujmnc.supabase.co', 'images.unsplash.com'],
       remotePatterns: [
          {
             protocol: 'https',
@@ -47,6 +41,8 @@ export default defineConfig({
          noExternal: ['@radix-ui/react-slot', '@radix-ui/react-tabs'],
       },
       build: {
+         // Minify JavaScript dan CSS menggunakan esbuild (default, faster)
+         minify: 'esbuild',
          // Optimize chunk splitting untuk mengurangi unused JS
          rollupOptions: {
             output: {

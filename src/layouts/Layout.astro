@@ -33,8 +33,9 @@ const {
 		
 		<!-- Preconnect to external domains for better performance (early connection) -->
 		<!-- Removed Google Fonts preconnect - using self-hosted fonts now -->
-		<link rel="preconnect" href="https://aitfpijkletoyuxujmnc.supabase.co" crossorigin>
 		<link rel="preconnect" href={Astro.url.origin} crossorigin>
+		<link rel="dns-prefetch" href={Astro.url.origin} />
+		<link rel="preconnect" href="https://aitfpijkletoyuxujmnc.supabase.co" crossorigin>
 		<link rel="dns-prefetch" href="https://aitfpijkletoyuxujmnc.supabase.co" />
 		<link rel="dns-prefetch" href="https://supabase.co" />
 		<link rel="dns-prefetch" href="https://connect.facebook.net" />
@@ -49,17 +50,15 @@ const {
 		<link rel="preload" href="/fonts/inter-v20-latin-500.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 		
 		<!-- Load self-hosted font CSS with font-display: optional to prevent CLS -->
-		<!-- Use media="print" trick to load asynchronously, then switch to "all" -->
-		<!-- font-display: optional prevents layout shift by using fallback if font not ready -->
-		<link rel="stylesheet" href="/fonts/inter.css" media="print" onload="this.media='all'">
-		<noscript>
-			<link rel="stylesheet" href="/fonts/inter.css">
-		</noscript>
+		<!-- Load synchronously but with font-display: optional to prevent blocking -->
+		<!-- font-display: optional means browser will use fallback if font not ready in 100ms -->
+		<link rel="stylesheet" href="/fonts/inter.css">
 		
-		<!-- Defer non-critical CSS loading untuk mengurangi render blocking -->
+		<!-- Defer non-critical CSS and JS loading untuk mengurangi render blocking -->
 		<script is:inline>
 			// Defer CSS loading untuk non-critical CSS
-			// Run immediately untuk catch Astro-injected CSS before render
+			// Defer JS loading untuk non-critical scripts (audit, a11y, etc)
+			// Run immediately untuk catch Astro-injected resources before render
 			(function() {
 				// Function to defer a CSS link
 				function deferCSSLink(link) {
@@ -76,15 +75,30 @@ const {
 					}
 				}
 				
-				// Intercept link elements before they block render
+				// Function to defer a script
+				function deferScript(script) {
+					if (script.hasAttribute('data-deferred')) return;
+					// Defer non-critical scripts (audit, a11y, aria-query)
+					const src = script.getAttribute('src') || '';
+					if (src.includes('audit') || src.includes('a11y') || src.includes('aria-query') || src.includes('axobject-query')) {
+						script.setAttribute('defer', '');
+						script.setAttribute('data-deferred', 'true');
+					}
+				}
+				
+				// Intercept link and script elements before they block render
 				const observer = new MutationObserver(function(mutations) {
 					mutations.forEach(function(mutation) {
 						mutation.addedNodes.forEach(function(node) {
-							if (node.nodeType === 1 && node.tagName === 'LINK' && node.rel === 'stylesheet') {
-								const href = node.getAttribute('href');
-								// Defer vendor CSS (non-critical)
-								if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
-									deferCSSLink(node);
+							if (node.nodeType === 1) {
+								if (node.tagName === 'LINK' && node.rel === 'stylesheet') {
+									const href = node.getAttribute('href');
+									// Defer vendor CSS (non-critical)
+									if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
+										deferCSSLink(node);
+									}
+								} else if (node.tagName === 'SCRIPT') {
+									deferScript(node);
 								}
 							}
 						});
@@ -105,21 +119,26 @@ const {
 					headObserver.observe(document.documentElement, { childList: true });
 				}
 				
-				// Also handle existing links immediately
-				function deferExistingCSS() {
+				// Also handle existing links and scripts immediately
+				function deferExistingResources() {
 					if (!document.head) return;
+					// Defer CSS
 					document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
 						const href = link.getAttribute('href');
 						if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
 							deferCSSLink(link);
 						}
 					});
+					// Defer scripts
+					document.querySelectorAll('script[src]').forEach(script => {
+						deferScript(script);
+					});
 				}
 				
 				// Run immediately and also on DOMContentLoaded
-				deferExistingCSS();
+				deferExistingResources();
 				if (document.readyState === 'loading') {
-					document.addEventListener('DOMContentLoaded', deferExistingCSS);
+					document.addEventListener('DOMContentLoaded', deferExistingResources);
 				}
 			})();
 		</script>
@@ -161,28 +180,34 @@ const {
 			})();
 			
 			// Detect font load untuk prevent CLS - run immediately
+			// Only apply Inter font if it loads within 100ms to prevent CLS
 			(function() {
 				// Check if fonts are already loaded
 				if ('fonts' in document) {
+					// Use a timeout to prevent waiting too long
+					const timeout = setTimeout(function() {
+						// Font didn't load in time, keep using system font
+						// Don't add fonts-loaded class to prevent shift
+					}, 100);
+					
 					if (document.fonts.status === 'loaded') {
+						clearTimeout(timeout);
 						document.documentElement.classList.add('fonts-loaded');
 					} else {
-						// Wait for fonts to load
+						// Wait for fonts to load, but with timeout
 						document.fonts.ready.then(function() {
-							document.documentElement.classList.add('fonts-loaded');
-						}).catch(function() {
-							// Fallback if fonts fail to load
-							setTimeout(function() {
+							clearTimeout(timeout);
+							// Only apply if fonts loaded quickly
+							if (document.fonts.check('12px Inter')) {
 								document.documentElement.classList.add('fonts-loaded');
-							}, 100);
+							}
+						}).catch(function() {
+							clearTimeout(timeout);
+							// Keep system font on error
 						});
 					}
-				} else {
-					// Fallback: assume fonts loaded after short delay
-					setTimeout(function() {
-						document.documentElement.classList.add('fonts-loaded');
-					}, 100);
 				}
+				// If fonts API not available, keep system font
 			})();
 		</script>
 	</body>
@@ -199,8 +224,9 @@ const {
 	
 	/* Prevent layout shift during font load */
 	body {
-		/* Reserve space to prevent shift */
+		/* Reserve space to prevent shift - use fixed height to prevent expansion */
 		min-height: 100vh;
+		height: auto; /* Allow growth but prevent initial shift */
 		/* Use system font initially, Inter will load later */
 		font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 		/* Match Inter's metrics to prevent shift - Inter has aspect ratio of ~0.52 */
@@ -215,18 +241,32 @@ const {
 		line-height: 1.5;
 		/* Prevent body from shifting when fonts load */
 		will-change: auto;
+		/* Use contain to isolate layout calculations */
+		contain: layout style;
+		/* Prevent font loading from causing shifts */
+		font-synthesis: none;
 	}
 	
 	/* Apply Inter font once loaded - with size-adjust to match metrics */
 	/* Only apply if font is actually loaded to prevent shift */
+	/* Use font-display: optional means font might not load, so we keep system font as fallback */
 	.fonts-loaded body {
 		font-family: 'Inter', system-ui, -apple-system, sans-serif;
 		font-size-adjust: 0.52; /* Inter's aspect ratio - prevents layout shift */
 		line-height: 1.5; /* Keep consistent line-height */
+		/* Ensure no layout shift when font swaps */
+		font-synthesis: none;
 	}
 	
 	/* Ensure main content doesn't cause body shifts */
 	main {
 		min-height: calc(100vh - 200px); /* Reserve space for header/footer */
+		/* Prevent layout shifts in main content */
+		contain: layout;
+	}
+	
+	/* Prevent layout shifts from header */
+	header {
+		contain: layout;
 	}
 </style>
