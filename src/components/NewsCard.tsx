@@ -1,4 +1,5 @@
 // NewsCard component - renders article cards
+import { getOptimizedImageUrl } from '../lib/utils';
 
 interface NewsCardProps {
    id: number;
@@ -41,7 +42,7 @@ export default function NewsCard({ title, slug, summary, thumbnail_url, thumbnai
          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
             <a href={articleUrl} className="flex-shrink-0 w-full sm:w-48">
                {thumbnail_url ? (
-                  <img src={thumbnail_url} alt={thumbnail_alt || title || 'Article thumbnail'} className="w-full sm:w-48 h-48 sm:h-28 rounded-lg object-cover" loading="lazy" width="192" height="112" decoding="async" fetchPriority="low" />
+                  <img src={getOptimizedImageUrl(thumbnail_url, 192, 112) || thumbnail_url} alt={thumbnail_alt || title || 'Article thumbnail'} className="w-full sm:w-48 h-48 sm:h-28 rounded-lg object-cover" loading="lazy" width="192" height="112" decoding="async" fetchPriority="low" sizes="(max-width: 640px) 100vw, 192px" style={{ aspectRatio: '192/112' }} />
                ) : (
                   <div className="w-full sm:w-48 h-48 sm:h-28 rounded-lg bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center">
                      <svg className="w-12 h-12 text-white opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">

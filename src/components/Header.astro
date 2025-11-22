@@ -24,7 +24,7 @@ import logo from '../assets/logo.png';
       </div>
 
       <!-- Navigation Menu -->
-      <nav class="hidden lg:flex items-center">
+      <nav class="hidden lg:flex items-center min-h-[44px]">
         <ul class="flex space-x-6 xl:space-x-8">
           <li>
             <a href="/" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 relative transition-colors duration-200 after:absolute after:bottom-[-1rem] after:left-0 after:right-0 after:h-0.5 after:bg-gradient-to-r after:from-blue-600 after:to-blue-700 after:rounded-sm">
@@ -73,7 +73,7 @@ import logo from '../assets/logo.png';
       <div class="flex items-center space-x-2 sm:space-x-4">
         <!-- Search Box -->
         <form action="/search" method="get" class="hidden md:block relative">
-          <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 pointer-events-none" style="will-change: transform;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>

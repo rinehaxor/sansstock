@@ -5,7 +5,7 @@ import { supabase } from '../db/supabase';
 import PopularNews from './PopularNews.astro';
 import AdsWidget from './AdsWidget.astro';
 import TrendingTags from './TrendingTags.astro';
-import { batchGetAltText } from '../lib/utils';
+import { batchGetAltText, getOptimizedImageUrl } from '../lib/utils';
 
 // Get page from URL query parameter
 const page = parseInt(Astro.url.searchParams.get('page') || '1');
@@ -52,13 +52,13 @@ const articlesWithAltText = (articles || []).map((article: any) => ({
 <section class="mb-8 sm:mb-16">
 	<div class="flex items-center justify-between mb-4 sm:mb-8">
 		<h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Terkini</h2>
-		<a href="/artikel" class="text-blue-600 hover:text-blue-700 font-medium flex items-center group text-sm sm:text-base">
+		<!-- <a href="/artikel" class="text-blue-600 hover:text-blue-700 font-medium flex items-center group text-sm sm:text-base">
 			<span class="hidden sm:inline">Lihat Semua</span>
 			<span class="sm:hidden">Semua</span>
 			<svg class="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
 			</svg>
-		</a>
+		</a> -->
 	</div>
 	
 	<div class="grid lg:grid-cols-3 gap-4 sm:gap-8">
@@ -98,7 +98,7 @@ const articlesWithAltText = (articles || []).map((article: any) => ({
 									<a href={articleUrl} class="flex-shrink-0 w-full sm:w-48">
 										{article.thumbnail_url ? (
 											<img
-												src={article.thumbnail_url}
+												src={getOptimizedImageUrl(article.thumbnail_url, 192, 112) || article.thumbnail_url}
 												alt={article.thumbnail_alt || article.title || 'Article thumbnail'}
 												class="w-full sm:w-48 h-48 sm:h-28 rounded-lg object-cover"
 												loading="lazy"
@@ -151,7 +151,7 @@ const articlesWithAltText = (articles || []).map((article: any) => ({
 						<li>
 							<a
 								href={page > 1 ? `?page=${page - 1}` : undefined}
-								class={`px-3 py-2 ml-0 leading-tight border rounded-l-lg ${page <= 1 ? 'text-gray-300 bg-white border-gray-200 cursor-default' : 'text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700'}`}
+								class={`px-3 py-2 ml-0 leading-tight border rounded-l-lg ${page <= 1 ? 'text-gray-400 bg-gray-50 border-gray-200 cursor-default' : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-900'}`}
 							>
 								Sebelumnya
 							</a>
@@ -172,7 +172,7 @@ const articlesWithAltText = (articles || []).map((article: any) => ({
 						<li>
 							<a
 								href={page < totalPages ? `?page=${page + 1}` : undefined}
-								class={`px-3 py-2 leading-tight border rounded-r-lg ${page >= totalPages ? 'text-gray-300 bg-white border-gray-200 cursor-default' : 'text-gray-500 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-700'}`}
+								class={`px-3 py-2 leading-tight border rounded-r-lg ${page >= totalPages ? 'text-gray-400 bg-gray-50 border-gray-200 cursor-default' : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-100 hover:text-gray-900'}`}
 							>
 								Berikutnya
 							</a>

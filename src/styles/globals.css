@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Font loading dengan display=optional untuk prevent CLS */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=optional');
 
 :root {
    --background: 0 0% 100%;
@@ -52,7 +53,10 @@
 body {
    background-color: hsl(var(--background));
    color: hsl(var(--foreground));
-   font-family: 'Inter', sans-serif;
+   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+   /* Prevent layout shift */
+   font-display: optional;
+   min-height: 100vh;
 }
 
 /* shadcn/ui component styles */
@@ -127,24 +131,26 @@ body {
 /* Mobile optimizations */
 @media (max-width: 640px) {
    /* Improve touch targets */
-   button, a {
+   button,
+   a {
       min-height: 44px;
       min-width: 44px;
    }
-   
+
    /* Better text rendering on mobile */
    body {
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       text-rendering: optimizeLegibility;
    }
-   
+
    /* Prevent horizontal scroll */
-   html, body {
+   html,
+   body {
       overflow-x: hidden;
       width: 100%;
    }
-   
+
    /* Better scrolling on iOS */
    * {
       -webkit-overflow-scrolling: touch;

@@ -77,3 +77,56 @@ export function getSiteUrl(site?: URL | string, requestUrl?: URL | string): stri
    // 4. Fallback terakhir (untuk development)
    return 'http://localhost:4321';
 }
+
+/**
+ * Convert Supabase image URL ke Astro optimized _image endpoint
+ * @param imageUrl - Original image URL (Supabase storage URL)
+ * @param width - Target width (default: 192 for thumbnails, 800 for featured)
+ * @param height - Target height (optional)
+ * @returns Optimized image URL via _image endpoint
+ */
+export function getOptimizedImageUrl(
+   imageUrl: string | null | undefined,
+   width: number = 192,
+   height?: number
+): string | null {
+   if (!imageUrl) return null;
+   
+   // Jika sudah melalui _image endpoint, return as-is
+   if (imageUrl.startsWith('/_image?')) {
+      return imageUrl;
+   }
+   
+   // Jika sudah relative URL, return as-is (local assets)
+   if (imageUrl.startsWith('/')) {
+      return imageUrl;
+   }
+   
+   // Hanya optimize images dari Supabase storage
+   // External images (Unsplash, dll) di-serve langsung untuk avoid 403 errors
+   try {
+      const url = new URL(imageUrl);
+      const isSupabase = url.hostname.includes('supabase.co') || url.hostname.includes('supabase.storage');
+      
+      if (!isSupabase) {
+         // Return original URL untuk external images (tidak di-optimize)
+         return imageUrl;
+      }
+   } catch {
+      // Invalid URL, return as-is
+      return imageUrl;
+   }
+   
+   // Convert Supabase URL ke _image endpoint
+   // Encode URL dengan benar untuk menghindari 403 error
+   const params = new URLSearchParams();
+   params.set('href', encodeURI(imageUrl));
+   params.set('w', String(width));
+   if (height) {
+      params.set('h', String(height));
+   }
+   params.set('q', '75');
+   params.set('f', 'webp');
+   
+   return `/_image?${params.toString()}`;
+}

@@ -292,9 +292,8 @@ function optimizeArticleImages(content: string): string {
 
 // Inject widget into content (only once, after 3rd paragraph)
 const contentWithWidget = injectBacaJugaWidget(article.content || '', bacaJugaHTML, 3);
-const optimizedContent = import.meta.env.PROD
-  ? optimizeArticleImages(contentWithWidget)
-  : contentWithWidget;
+// Always optimize images (both dev and prod) untuk konsistensi
+const optimizedContent = optimizeArticleImages(contentWithWidget);
 
 // Get alt text - prioritize thumbnail_alt from articles table, then media_metadata
 let thumbnailAltText: string | null = null;

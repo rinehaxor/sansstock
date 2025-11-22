@@ -63,6 +63,27 @@ function getCategoryColor(categoryName: string): string {
   };
   return colors[categoryName] || 'from-gray-500 to-gray-600';
 }
+
+// Generate preload URL for LCP image
+function getPreloadUrl(thumbnailUrl: string | null | undefined): string | null {
+  if (!thumbnailUrl) return null;
+  try {
+    const url = new URL(thumbnailUrl);
+    const params = new URLSearchParams();
+    params.set('href', thumbnailUrl);
+    params.set('w', '800');
+    params.set('h', '343');
+    params.set('q', '75');
+    params.set('f', 'webp');
+    return `/_image?${params.toString()}`;
+  } catch {
+    return null;
+  }
+}
+
+const lcpImageUrl = articlesWithAltText && articlesWithAltText.length > 0 
+  ? getPreloadUrl(articlesWithAltText[0].thumbnail_url)
+  : null;
 ---
 
 <section class="mb-12 sm:mb-16">
@@ -112,3 +133,17 @@ function getCategoryColor(categoryName: string): string {
 		)}
 	</div>
 </section>
+
+{lcpImageUrl && (
+	<script is:inline define:vars={{ imageUrl: lcpImageUrl }}>
+		(function() {
+			if (typeof window === 'undefined') return;
+			const link = document.createElement('link');
+			link.rel = 'preload';
+			link.as = 'image';
+			link.href = imageUrl;
+			link.setAttribute('fetchpriority', 'high');
+			document.head.appendChild(link);
+		})();
+	</script>
+)}

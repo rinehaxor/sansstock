@@ -19,11 +19,26 @@ export default defineConfig({
    },
    integrations: [tailwind(), react(), sitemap()],
    image: {
-      domains: ['localhost', 'supabase.co', '*.supabase.co'],
+      // Allow images from Supabase storage and other trusted sources
+      domains: [
+         'localhost',
+         'supabase.co',
+         '*.supabase.co',
+         'aitfpijkletoyuxujmnc.supabase.co',
+         'images.unsplash.com',
+      ],
       remotePatterns: [
          {
             protocol: 'https',
             hostname: '**.supabase.co',
+         },
+         {
+            protocol: 'https',
+            hostname: 'aitfpijkletoyuxujmnc.supabase.co',
+         },
+         {
+            protocol: 'https',
+            hostname: 'images.unsplash.com',
          },
       ],
    },

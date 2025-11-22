@@ -44,11 +44,14 @@ const {
                alt={thumbnailAlt || title}
                width={isLarge ? 800 : 400}
                height={isLarge ? 343 : 225}
+               widths={isLarge ? [640, 800, 1024] : [320, 400, 640]}
                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                loading={isLarge || eagerLoad ? 'eager' : 'lazy'}
                fetchpriority={fetchPriority}
+               decoding="async"
                format="webp"
                sizes={isLarge ? "(max-width: 768px) 100vw, 800px" : "(max-width: 640px) 100vw, 400px"}
+               style={isLarge ? "aspect-ratio: 800 / 343;" : "aspect-ratio: 400 / 225;"}
             />
             <div class="absolute inset-0 bg-black/20"></div>
          </>
