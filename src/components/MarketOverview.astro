@@ -41,7 +41,7 @@ function getIconConfig(symbol: string, changeType: 'positive' | 'negative') {
 }
 ---
 
-<section class="mb-12 sm:mb-16">
+<section class="mb-12 sm:mb-16" style="min-height: 280px;">
 	<div class="flex items-center justify-between mb-4 sm:mb-8">
 		<h2 class="text-2xl sm:text-3xl font-bold text-gray-900">Ringkasan Pasar</h2>
 		<a href="/categories/pasar" class="text-blue-600 hover:text-blue-700 font-medium flex items-center group text-sm sm:text-base">
@@ -52,7 +52,7 @@ function getIconConfig(symbol: string, changeType: 'positive' | 'negative') {
 			</svg>
 		</a>
 	</div>
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6" style="min-height: 200px;">
 		{displayData.map((item) => {
 			const iconConfig = getIconConfig(item.symbol, item.changeType);
 			return (

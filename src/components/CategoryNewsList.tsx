@@ -155,7 +155,7 @@ export default function CategoryNewsList({
                <button
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage <= 1 || loading}
-                  className={`px-4 py-2 rounded-lg border transition-colors ${currentPage > 1 && !loading ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'}`}
+                  className={`px-4 py-2 rounded-lg border transition-colors ${currentPage > 1 && !loading ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-300 text-gray-500 bg-gray-100 cursor-not-allowed'}`}
                >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -171,7 +171,7 @@ export default function CategoryNewsList({
                <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage >= totalPages || loading}
-                  className={`px-4 py-2 rounded-lg border transition-colors ${currentPage < totalPages && !loading ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-200 text-gray-400 cursor-not-allowed opacity-50'}`}
+                  className={`px-4 py-2 rounded-lg border transition-colors ${currentPage < totalPages && !loading ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-gray-300 text-gray-500 bg-gray-100 cursor-not-allowed'}`}
                >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />

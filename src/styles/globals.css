@@ -1,5 +1,5 @@
-/* Font loading dengan display=optional untuk prevent CLS */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=optional');
+/* Font loading di-handle di Layout.astro dengan defer untuk prevent render blocking */
+/* Fallback font stack untuk prevent layout shift */
 
 :root {
    --background: 0 0% 100%;
