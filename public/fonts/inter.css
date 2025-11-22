@@ -1,0 +1,60 @@
+/* Inter Font - Self-hosted untuk mengurangi CLS dan dependency ke CDN */
+/* Download font files dari: https://fonts.google.com/specimen/Inter */
+/* Atau gunakan: https://gwfh.mranftl.com/fonts/inter */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300;
+  font-display: optional; /* Prevent layout shift - use fallback if not ready */
+  src: url('./inter-v20-latin-300.woff2') format('woff2');
+  /* ascent-override dan descent-override untuk match system fonts dan prevent CLS */
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: url('./inter-v20-latin-regular.woff2') format('woff2');
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: optional;
+  src: url('./inter-v20-latin-500.woff2') format('woff2');
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: optional;
+  src: url('./inter-v20-latin-600.woff2') format('woff2');
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: optional;
+  src: url('./inter-v20-latin-700.woff2') format('woff2');
+  ascent-override: 90%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+

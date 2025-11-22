@@ -32,8 +32,7 @@ const {
 		<title>{title}</title>
 		
 		<!-- Preconnect to external domains for better performance (early connection) -->
-		<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<!-- Removed Google Fonts preconnect - using self-hosted fonts now -->
 		<link rel="preconnect" href="https://aitfpijkletoyuxujmnc.supabase.co" crossorigin>
 		<link rel="preconnect" href={Astro.url.origin} crossorigin>
 		<link rel="dns-prefetch" href="https://aitfpijkletoyuxujmnc.supabase.co" />
@@ -44,11 +43,17 @@ const {
 		<link rel="dns-prefetch" href="https://static.cloudflareinsights.com" />
 		<!-- Jangan preconnect ke pintu.co.id - akan di-load lazy -->
 		
-		<!-- Load font CSS with font-display: optional to prevent CLS -->
+		<!-- Preload critical font files untuk LCP improvement -->
+		<!-- Regular weight (400) adalah yang paling sering digunakan -->
+		<link rel="preload" href="/fonts/inter-v20-latin-regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+		<link rel="preload" href="/fonts/inter-v20-latin-500.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+		
+		<!-- Load self-hosted font CSS with font-display: optional to prevent CLS -->
 		<!-- Use media="print" trick to load asynchronously, then switch to "all" -->
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=optional" media="print" onload="this.media='all'">
+		<!-- font-display: optional prevents layout shift by using fallback if font not ready -->
+		<link rel="stylesheet" href="/fonts/inter.css" media="print" onload="this.media='all'">
 		<noscript>
-			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=optional">
+			<link rel="stylesheet" href="/fonts/inter.css">
 		</noscript>
 		
 		<!-- Defer non-critical CSS loading untuk mengurangi render blocking -->
@@ -127,7 +132,7 @@ const {
 		<link rel="manifest" href="/site.webmanifest" />
 		<slot name="head" />
 	</head>
-	<body class="bg-gray-50 text-gray-900 font-sans antialiased" style="min-height: 100vh;">
+	<body class="bg-gray-50 text-gray-900 font-sans antialiased" style="min-height: 100vh; width: 100%; position: relative;">
 		<Header />
 		<main class="min-h-screen">
 			<slot />
@@ -188,6 +193,8 @@ const {
 		scroll-behavior: smooth;
 		/* Use system font as primary to prevent CLS */
 		font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		/* Prevent font-related layout shifts */
+		font-size-adjust: 0.52; /* Match Inter's aspect ratio */
 	}
 	
 	/* Prevent layout shift during font load */
@@ -196,10 +203,30 @@ const {
 		min-height: 100vh;
 		/* Use system font initially, Inter will load later */
 		font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		/* Match Inter's metrics to prevent shift - Inter has aspect ratio of ~0.52 */
+		/* font-size-adjust helps maintain consistent text size when font swaps */
+		font-size-adjust: 0.52;
+		/* Prevent layout shifts from content changes */
+		overflow-x: hidden;
+		position: relative;
+		/* Ensure body doesn't shift when content loads */
+		width: 100%;
+		/* Keep consistent line-height to prevent shifts */
+		line-height: 1.5;
+		/* Prevent body from shifting when fonts load */
+		will-change: auto;
 	}
 	
-	/* Apply Inter font once loaded */
+	/* Apply Inter font once loaded - with size-adjust to match metrics */
+	/* Only apply if font is actually loaded to prevent shift */
 	.fonts-loaded body {
 		font-family: 'Inter', system-ui, -apple-system, sans-serif;
+		font-size-adjust: 0.52; /* Inter's aspect ratio - prevents layout shift */
+		line-height: 1.5; /* Keep consistent line-height */
+	}
+	
+	/* Ensure main content doesn't cause body shifts */
+	main {
+		min-height: calc(100vh - 200px); /* Reserve space for header/footer */
 	}
 </style>

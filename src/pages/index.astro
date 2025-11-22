@@ -416,13 +416,21 @@ const lcpImageUrl = featuredArticlesWithAlt && featuredArticlesWithAlt.length > 
 				'</div>';
 		}
 
-		function renderArticles(articles) {
-			if (!Array.isArray(articles) || articles.length === 0) {
-				renderEmpty();
-				return;
-			}
+			function renderArticles(articles) {
+				if (!Array.isArray(articles) || articles.length === 0) {
+					renderEmpty();
+					return;
+				}
 
-			var itemsHtml = articles.map(function (article) {
+				// Reserve space before rendering to prevent layout shift
+				var container = articlesContainer;
+				var currentHeight = 0;
+				if (container) {
+					currentHeight = container.offsetHeight || 400; // Fallback to 400px if 0
+					container.style.minHeight = currentHeight + 'px';
+				}
+
+				var itemsHtml = articles.map(function (article) {
 				var title = escapeHtml(article.title || '');
 				var summary = escapeHtml(article.summary || 'Tidak ada ringkasan tersedia...');
 				var slug = escapeHtml(article.slug || '');
@@ -531,6 +539,15 @@ const lcpImageUrl = featuredArticlesWithAlt && featuredArticlesWithAlt.length > 
 				'<div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">' +
 				itemsHtml +
 				'</div>';
+			
+			// Reset min-height after a short delay to allow layout to settle
+			if (container) {
+				setTimeout(function() {
+					if (container) {
+						container.style.minHeight = '';
+					}
+				}, 100);
+			}
 		}
 
 		async function fetchArticles(categoryId) {
