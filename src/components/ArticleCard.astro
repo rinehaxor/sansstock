@@ -48,7 +48,7 @@ const {
                class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                loading={isLarge || eagerLoad ? 'eager' : 'lazy'}
                fetchpriority={fetchPriority}
-               decoding="async"
+               decoding={isLarge && fetchPriority === 'high' ? 'sync' : 'async'}
                format="webp"
                sizes={isLarge ? "(max-width: 768px) 100vw, 800px" : "(max-width: 640px) 100vw, 400px"}
                style={isLarge ? "aspect-ratio: 800 / 343;" : "aspect-ratio: 400 / 225;"}

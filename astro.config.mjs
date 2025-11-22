@@ -17,7 +17,14 @@ export default defineConfig({
    security: {
       checkOrigin: false,
    },
-   integrations: [tailwind(), react(), sitemap()],
+   integrations: [
+      tailwind({
+         // Optimize Tailwind CSS output
+         applyBaseStyles: true,
+      }),
+      react(),
+      sitemap(),
+   ],
    image: {
       // Allow images from Supabase storage and other trusted sources
       domains: ['localhost', 'supabase.co', '*.supabase.co', 'aitfpijkletoyuxujmnc.supabase.co', 'images.unsplash.com'],

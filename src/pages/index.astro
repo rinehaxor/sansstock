@@ -324,7 +324,6 @@ const lcpImageUrl = featuredArticlesWithAlt && featuredArticlesWithAlt.length > 
 				{Array.isArray(availableCategories) && availableCategories.length > 0 ? (
 					availableCategories.map((category) => (
 						<button
-							key={category.id}
 							data-category-tab
 							data-category-id={category.id}
 							class="px-3 py-2 sm:px-4 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 rounded-none border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
@@ -595,20 +594,25 @@ const lcpImageUrl = featuredArticlesWithAlt && featuredArticlesWithAlt.length > 
 		});
 
 		// Defer initial fetch to avoid blocking critical rendering
-		// Use requestIdleCallback if available, otherwise setTimeout
+		// Wait for page to be fully interactive before fetching
 		function scheduleInitialFetch() {
-			if (typeof requestIdleCallback !== 'undefined') {
-				requestIdleCallback(function() {
-					if (activeCategoryId) {
-						fetchArticles(activeCategoryId);
-					}
-				}, { timeout: 2000 });
-			} else {
+			// Wait for load event + additional delay to ensure critical resources are loaded
+			if (document.readyState === 'complete') {
+				// Page already loaded, wait a bit more
 				setTimeout(function() {
 					if (activeCategoryId) {
 						fetchArticles(activeCategoryId);
 					}
-				}, 100);
+				}, 500);
+			} else {
+				// Wait for page load, then additional delay
+				window.addEventListener('load', function() {
+					setTimeout(function() {
+						if (activeCategoryId) {
+							fetchArticles(activeCategoryId);
+						}
+					}, 500);
+				}, { once: true });
 			}
 		}
 		

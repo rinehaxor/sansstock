@@ -49,10 +49,70 @@ const {
 		<link rel="preload" href="/fonts/inter-v20-latin-regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 		<link rel="preload" href="/fonts/inter-v20-latin-500.woff2" as="font" type="font/woff2" crossorigin="anonymous">
 		
-		<!-- Load self-hosted font CSS with font-display: optional to prevent CLS -->
-		<!-- Load synchronously but with font-display: optional to prevent blocking -->
+		<!-- Preload non-critical font weights with low priority to avoid blocking -->
+		<!-- Font 600 and 700 are used for styling but not critical for initial render -->
+		<link rel="preload" href="/fonts/inter-v20-latin-600.woff2" as="font" type="font/woff2" crossorigin="anonymous" fetchpriority="low">
+		<link rel="preload" href="/fonts/inter-v20-latin-700.woff2" as="font" type="font/woff2" crossorigin="anonymous" fetchpriority="low">
+		
+		<!-- Inline font CSS to prevent render-blocking request -->
 		<!-- font-display: optional means browser will use fallback if font not ready in 100ms -->
-		<link rel="stylesheet" href="/fonts/inter.css">
+		<style is:inline>
+			/* Inter Font - Self-hosted untuk mengurangi CLS dan dependency ke CDN */
+			@font-face {
+			  font-family: 'Inter';
+			  font-style: normal;
+			  font-weight: 300;
+			  font-display: optional; /* Prevent layout shift - use fallback if not ready */
+			  src: url('/fonts/inter-v20-latin-300.woff2') format('woff2');
+			  ascent-override: 90%;
+			  descent-override: 22%;
+			  line-gap-override: 0%;
+			}
+
+			@font-face {
+			  font-family: 'Inter';
+			  font-style: normal;
+			  font-weight: 400;
+			  font-display: optional;
+			  src: url('/fonts/inter-v20-latin-regular.woff2') format('woff2');
+			  ascent-override: 90%;
+			  descent-override: 22%;
+			  line-gap-override: 0%;
+			}
+
+			@font-face {
+			  font-family: 'Inter';
+			  font-style: normal;
+			  font-weight: 500;
+			  font-display: optional;
+			  src: url('/fonts/inter-v20-latin-500.woff2') format('woff2');
+			  ascent-override: 90%;
+			  descent-override: 22%;
+			  line-gap-override: 0%;
+			}
+
+			@font-face {
+			  font-family: 'Inter';
+			  font-style: normal;
+			  font-weight: 600;
+			  font-display: optional;
+			  src: url('/fonts/inter-v20-latin-600.woff2') format('woff2');
+			  ascent-override: 90%;
+			  descent-override: 22%;
+			  line-gap-override: 0%;
+			}
+
+			@font-face {
+			  font-family: 'Inter';
+			  font-style: normal;
+			  font-weight: 700;
+			  font-display: optional;
+			  src: url('/fonts/inter-v20-latin-700.woff2') format('woff2');
+			  ascent-override: 90%;
+			  descent-override: 22%;
+			  line-gap-override: 0%;
+			}
+		</style>
 		
 		<!-- Defer non-critical CSS and JS loading untuk mengurangi render blocking -->
 		<script is:inline>
@@ -93,8 +153,8 @@ const {
 							if (node.nodeType === 1) {
 								if (node.tagName === 'LINK' && node.rel === 'stylesheet') {
 									const href = node.getAttribute('href');
-									// Defer vendor CSS (non-critical)
-									if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
+									// Defer ALL non-critical CSS from Astro (vendor, chunk, or any generated CSS)
+									if (href && href.includes('/_astro/')) {
 										deferCSSLink(node);
 									}
 								} else if (node.tagName === 'SCRIPT') {
@@ -122,10 +182,10 @@ const {
 				// Also handle existing links and scripts immediately
 				function deferExistingResources() {
 					if (!document.head) return;
-					// Defer CSS
+					// Defer ALL non-critical CSS from Astro
 					document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
 						const href = link.getAttribute('href');
-						if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
+						if (href && href.includes('/_astro/')) {
 							deferCSSLink(link);
 						}
 					});
@@ -151,7 +211,7 @@ const {
 		<link rel="manifest" href="/site.webmanifest" />
 		<slot name="head" />
 	</head>
-	<body class="bg-gray-50 text-gray-900 font-sans antialiased" style="min-height: 100vh; width: 100%; position: relative;">
+	<body class="bg-gray-50 text-gray-900 antialiased">
 		<Header />
 		<main class="min-h-screen">
 			<slot />
@@ -224,27 +284,31 @@ const {
 	
 	/* Prevent layout shift during font load */
 	body {
-		/* Reserve space to prevent shift - use fixed height to prevent expansion */
+		/* Reserve space to prevent shift - use fixed dimensions */
 		min-height: 100vh;
-		height: auto; /* Allow growth but prevent initial shift */
+		width: 100%;
+		position: relative;
 		/* Use system font initially, Inter will load later */
+		/* Remove font-sans class to prevent Tailwind font conflict */
 		font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 		/* Match Inter's metrics to prevent shift - Inter has aspect ratio of ~0.52 */
 		/* font-size-adjust helps maintain consistent text size when font swaps */
 		font-size-adjust: 0.52;
 		/* Prevent layout shifts from content changes */
 		overflow-x: hidden;
-		position: relative;
-		/* Ensure body doesn't shift when content loads */
-		width: 100%;
 		/* Keep consistent line-height to prevent shifts */
 		line-height: 1.5;
-		/* Prevent body from shifting when fonts load */
-		will-change: auto;
-		/* Use contain to isolate layout calculations */
-		contain: layout style;
 		/* Prevent font loading from causing shifts */
 		font-synthesis: none;
+		/* Force GPU acceleration to prevent layout shifts */
+		transform: translateZ(0);
+		/* Use contain to isolate layout calculations */
+		contain: layout style paint;
+		/* Ensure stable dimensions */
+		box-sizing: border-box;
+		/* Prevent margin collapse that could cause shifts */
+		margin: 0;
+		padding: 0;
 	}
 	
 	/* Apply Inter font once loaded - with size-adjust to match metrics */
@@ -267,6 +331,12 @@ const {
 	
 	/* Prevent layout shifts from header */
 	header {
-		contain: layout;
+		contain: layout style paint;
+		/* Ensure header has stable dimensions */
+		min-height: 64px;
+		height: 64px;
+		/* Prevent layout shift during render */
+		transform: translateZ(0);
+		will-change: auto;
 	}
 </style>

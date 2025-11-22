@@ -1,7 +1,28 @@
 import { type Config } from 'tailwindcss';
 
 export default {
-  content: ['./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
+  content: [
+    './src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}',
+    // Exclude node_modules to speed up build and reduce unused CSS
+    '!./src/**/node_modules/**',
+  ],
+  // Safelist untuk dynamic classes yang mungkin tidak terdeteksi oleh content scanner
+  // Ini membantu Tailwind tetap include classes yang digunakan secara dinamis
+  safelist: [
+    // Common dynamic classes yang digunakan di codebase
+    /^text-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)$/,
+    /^font-(normal|medium|semibold|bold)$/,
+    // Color utilities yang digunakan secara dinamis
+    /^bg-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
+    /^text-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
+    /^border-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
+    /^hover:bg-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
+    /^hover:text-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
+    // Aspect ratios (used in ArticleCard, etc)
+    /^aspect-\[.+\]$/,
+    // Line clamp utilities
+    /^line-clamp-\d+$/,
+  ],
   theme: {
     extend: {
       colors: {

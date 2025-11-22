@@ -4,9 +4,9 @@ import { Image } from 'astro:assets';
 import logo from '../assets/logo.png';
 ---
 
-<header class="bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-50 transition-all duration-300" style="min-height: 64px; height: 64px;">
+<header class="header-main bg-white/95 backdrop-blur-md border-b border-gray-200/80 sticky top-0 z-50 transition-all duration-300">
   <div class="max-w-7xl mx-auto px-3 sm:px-4">
-    <div class="flex items-center justify-between" style="min-height: 64px; height: 64px;">
+    <div class="header-container flex items-center justify-between">
       <!-- Logo dan Brand -->
       <div class="flex-shrink-0 z-10 flex-1 lg:flex-none flex justify-center lg:justify-start">
         <a href="/" class="flex items-center gap-2 sm:gap-3 text-gray-900 hover:scale-105 transition-transform duration-200">
@@ -24,45 +24,45 @@ import logo from '../assets/logo.png';
       </div>
 
       <!-- Navigation Menu -->
-      <nav class="hidden lg:flex items-center min-h-[44px]" style="min-height: 44px; height: 44px;">
-        <ul class="flex space-x-6 xl:space-x-8">
-          <li>
-            <a href="/" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 relative transition-colors duration-200 after:absolute after:bottom-[-1rem] after:left-0 after:right-0 after:h-0.5 after:bg-gradient-to-r after:from-blue-600 after:to-blue-700 after:rounded-sm">
+      <nav class="header-nav hidden lg:flex items-center">
+        <ul class="header-nav-list flex">
+          <li class="header-nav-item">
+            <a href="/" class="header-nav-link text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 relative transition-colors duration-200 after:absolute after:bottom-[-1rem] after:left-0 after:right-0 after:h-0.5 after:bg-gradient-to-r after:from-blue-600 after:to-blue-700 after:rounded-sm">
               Beranda
             </a>
           </li>
-          <li>
-            <a href="/categories/ekonomi" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+          <li class="header-nav-item">
+            <a href="/categories/ekonomi" class="header-nav-link text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
               Ekonomi
             </a>
           </li>
-          <li>
-            <a href="/categories/saham" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+          <li class="header-nav-item">
+            <a href="/categories/saham" class="header-nav-link text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
               Saham
             </a>
           </li>
-          <li>
-            <a href="/categories/pasar" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+          <li class="header-nav-item">
+            <a href="/categories/pasar" class="header-nav-link text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
               Pasar
             </a>
           </li>
-          <li>
-            <a href="/categories/analisis" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+          <li class="header-nav-item">
+            <a href="/categories/analisis" class="header-nav-link text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
               Analisis
             </a>
           </li>
-          <li>
-            <a href="/categories/kripto" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+          <li class="header-nav-item">
+            <a href="/categories/kripto" class="header-nav-link text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
               Kripto
             </a>
           </li>
-          <li>
-            <a href="/categories/teknologi" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+          <li class="header-nav-item">
+            <a href="/categories/teknologi" class="header-nav-link text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
               Teknologi
             </a>
           </li>
-          <li>
-            <a href="/underwriters" class="text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
+          <li class="header-nav-item">
+            <a href="/underwriters" class="header-nav-link text-gray-700 hover:text-blue-600 font-medium text-sm py-2 px-1 transition-colors duration-200">
               History Underwriter IPO
             </a>
           </li>
@@ -301,3 +301,91 @@ import logo from '../assets/logo.png';
     }
   })();
 </script>
+
+<style>
+  /* Prevent layout shift on header */
+  .header-main {
+    min-height: 64px;
+    height: 64px;
+    /* Prevent layout shift */
+    contain: layout style paint;
+    /* Force GPU acceleration */
+    transform: translateZ(0);
+    /* Stable dimensions */
+    box-sizing: border-box;
+  }
+
+  .header-container {
+    min-height: 64px;
+    height: 64px;
+    /* Prevent layout shift */
+    contain: layout;
+    /* Stable dimensions */
+    box-sizing: border-box;
+  }
+
+  /* Prevent layout shift on navigation menu */
+  .header-nav {
+    min-height: 44px;
+    height: 44px;
+    /* Prevent layout shift during font load */
+    contain: layout style paint;
+    /* Force GPU acceleration */
+    transform: translateZ(0);
+    /* Stable dimensions */
+    box-sizing: border-box;
+  }
+
+  .header-nav-list {
+    /* Stable spacing - use gap instead of space-x for better control */
+    gap: 1.5rem; /* space-x-6 equivalent */
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    /* Prevent layout shift */
+    contain: layout;
+    /* Ensure stable height */
+    height: 100%;
+    align-items: center;
+  }
+
+  @media (min-width: 1280px) {
+    .header-nav-list {
+      gap: 2rem; /* xl:space-x-8 equivalent */
+    }
+  }
+
+  .header-nav-item {
+    /* Prevent layout shift on list items */
+    contain: layout style;
+    /* Stable dimensions */
+    height: 100%;
+    display: flex;
+    align-items: center;
+    /* Prevent font shift */
+    font-size-adjust: 0.52;
+    line-height: 1.5;
+  }
+
+  .header-nav-link {
+    /* Prevent layout shift on links */
+    display: inline-block;
+    /* Stable dimensions - prevent text reflow */
+    white-space: nowrap;
+    /* Prevent font shift */
+    font-size-adjust: 0.52;
+    line-height: 1.5;
+    /* Use system font initially to prevent shift */
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    /* Stable box model */
+    box-sizing: border-box;
+    /* Prevent layout shift during font swap */
+    font-synthesis: none;
+  }
+
+  /* Apply Inter font once loaded (from Layout.astro) */
+  .fonts-loaded .header-nav-link {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size-adjust: 0.52;
+  }
+</style>

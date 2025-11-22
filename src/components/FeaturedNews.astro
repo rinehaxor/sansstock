@@ -84,7 +84,17 @@ function getPreloadUrl(thumbnailUrl: string | null | undefined): string | null {
 const lcpImageUrl = articlesWithAltText && articlesWithAltText.length > 0 
   ? getPreloadUrl(articlesWithAltText[0].thumbnail_url)
   : null;
+
+// Get direct Supabase URL for preconnect (if available)
+const supabaseImageUrl = articlesWithAltText && articlesWithAltText.length > 0 
+  ? articlesWithAltText[0].thumbnail_url
+  : null;
 ---
+
+{/* Preload LCP image in head for faster loading - reduce resource load delay */}
+{lcpImageUrl && (
+  <link slot="head" rel="preload" as="image" href={lcpImageUrl} fetchpriority="high" />
+)}
 
 <section class="mb-12 sm:mb-16">
 	<div class="grid lg:grid-cols-3 gap-4 sm:gap-6">
@@ -133,17 +143,3 @@ const lcpImageUrl = articlesWithAltText && articlesWithAltText.length > 0
 		)}
 	</div>
 </section>
-
-{lcpImageUrl && (
-	<script is:inline define:vars={{ imageUrl: lcpImageUrl }}>
-		(function() {
-			if (typeof window === 'undefined') return;
-			const link = document.createElement('link');
-			link.rel = 'preload';
-			link.as = 'image';
-			link.href = imageUrl;
-			link.setAttribute('fetchpriority', 'high');
-			document.head.appendChild(link);
-		})();
-	</script>
-)}
