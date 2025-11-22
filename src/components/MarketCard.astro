@@ -20,8 +20,8 @@ const changeIcon = changeType === 'positive' ? 'M7 11l5-5m0 0l5 5m-5-5v12' : 'M1
 const cardStyle = { minHeight: '140px' };
 ---
 
-<Card class="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1" style={cardStyle}>
-	<CardHeader class="pb-3 sm:pb-4">
+<Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1" style={cardStyle}>
+	<CardHeader className="pb-3 sm:pb-4">
 		<div class="flex justify-between items-start gap-2">
 			<div class={`w-10 h-10 sm:w-12 sm:h-12 ${iconBgColor} rounded-lg flex items-center justify-center flex-shrink-0`}>
 				<svg class={`w-5 h-5 sm:w-6 sm:h-6 ${iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -37,11 +37,11 @@ const cardStyle = { minHeight: '140px' };
 			</span>
 		</div>
 	</CardHeader>
-	<CardContent class="pt-0">
+	<CardContent className="pt-0">
 		<div class="space-y-1.5 sm:space-y-2" data-market-card={symbol || ''}>
 			<h3 class="text-xs sm:text-sm font-medium text-gray-700 uppercase tracking-wide">{name}</h3>
-			<div class="text-2xl sm:text-3xl font-bold text-gray-900" data-value style="min-height: 2.5rem;">{value}</div>
-			<div class="text-xs sm:text-sm text-gray-600" data-change style="min-height: 1rem;">{change}</div>
+			<div class="text-2xl sm:text-3xl font-bold text-gray-900" data-value style="min-height: 2.5rem; height: 2.5rem; display: flex; align-items: center; contain: layout;">{value}</div>
+			<div class="text-xs sm:text-sm text-gray-600" data-change style="min-height: 1rem; height: 1rem; display: flex; align-items: center; contain: layout;">{change}</div>
 		</div>
 	</CardContent>
 </Card>
