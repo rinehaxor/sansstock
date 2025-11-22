@@ -594,25 +594,20 @@ const lcpImageUrl = featuredArticlesWithAlt && featuredArticlesWithAlt.length > 
 		});
 
 		// Defer initial fetch to avoid blocking critical rendering
-		// Wait for page to be fully interactive before fetching
+		// Use requestIdleCallback if available, otherwise setTimeout
 		function scheduleInitialFetch() {
-			// Wait for load event + additional delay to ensure critical resources are loaded
-			if (document.readyState === 'complete') {
-				// Page already loaded, wait a bit more
+			if (typeof requestIdleCallback !== 'undefined') {
+				requestIdleCallback(function() {
+					if (activeCategoryId) {
+						fetchArticles(activeCategoryId);
+					}
+				}, { timeout: 1000 });
+			} else {
 				setTimeout(function() {
 					if (activeCategoryId) {
 						fetchArticles(activeCategoryId);
 					}
-				}, 500);
-			} else {
-				// Wait for page load, then additional delay
-				window.addEventListener('load', function() {
-					setTimeout(function() {
-						if (activeCategoryId) {
-							fetchArticles(activeCategoryId);
-						}
-					}, 500);
-				}, { once: true });
+				}, 100);
 			}
 		}
 		

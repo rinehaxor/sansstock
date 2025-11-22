@@ -6,22 +6,16 @@ export default {
     // Exclude node_modules to speed up build and reduce unused CSS
     '!./src/**/node_modules/**',
   ],
-  // Safelist untuk dynamic classes yang mungkin tidak terdeteksi oleh content scanner
-  // Ini membantu Tailwind tetap include classes yang digunakan secara dinamis
+  // Minimal safelist - hanya untuk classes yang benar-benar digunakan secara dinamis
+  // Jangan terlalu agresif karena akan menambahkan banyak unused CSS
   safelist: [
-    // Common dynamic classes yang digunakan di codebase
-    /^text-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl)$/,
-    /^font-(normal|medium|semibold|bold)$/,
-    // Color utilities yang digunakan secara dinamis
-    /^bg-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
-    /^text-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
-    /^border-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
-    /^hover:bg-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
-    /^hover:text-(gray|blue|green|red|yellow|purple|pink|orange)-\d+$/,
-    // Aspect ratios (used in ArticleCard, etc)
-    /^aspect-\[.+\]$/,
-    // Line clamp utilities
+    // Line clamp utilities (used in ArticleCard, etc)
     /^line-clamp-\d+$/,
+    // Aspect ratios dengan pattern spesifik yang digunakan
+    'aspect-[21/9]',
+    'aspect-[16/6.5]',
+    'aspect-[16/9]',
+    'aspect-[4/3]',
   ],
   theme: {
     extend: {

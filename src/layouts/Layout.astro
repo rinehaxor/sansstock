@@ -153,8 +153,8 @@ const {
 							if (node.nodeType === 1) {
 								if (node.tagName === 'LINK' && node.rel === 'stylesheet') {
 									const href = node.getAttribute('href');
-									// Defer ALL non-critical CSS from Astro (vendor, chunk, or any generated CSS)
-									if (href && href.includes('/_astro/')) {
+									// Defer vendor CSS (non-critical) - jangan defer semua CSS karena bisa break styling
+									if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
 										deferCSSLink(node);
 									}
 								} else if (node.tagName === 'SCRIPT') {
@@ -182,10 +182,10 @@ const {
 				// Also handle existing links and scripts immediately
 				function deferExistingResources() {
 					if (!document.head) return;
-					// Defer ALL non-critical CSS from Astro
+					// Defer vendor CSS (non-critical) - jangan defer semua CSS
 					document.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
 						const href = link.getAttribute('href');
-						if (href && href.includes('/_astro/')) {
+						if (href && href.includes('/_astro/') && (href.includes('vendor') || href.includes('chunk'))) {
 							deferCSSLink(link);
 						}
 					});
