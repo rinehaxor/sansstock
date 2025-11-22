@@ -26,17 +26,26 @@ try {
 const displayData = marketData;
 
 // Map symbols to icon colors
+// Icon background color harus mengikuti changeType (hijau untuk naik, merah untuk turun)
 function getIconConfig(symbol: string, changeType: 'positive' | 'negative') {
-	const configs: Record<string, { iconColor: string; iconBgColor: string }> = {
-		'^JKSE': { iconColor: 'text-white', iconBgColor: 'bg-green-600' },
-		'IDR=X': { iconColor: 'text-white', iconBgColor: changeType === 'positive' ? 'bg-green-600' : 'bg-red-600' },
-		'BTC-USD': { iconColor: 'text-white', iconBgColor: 'bg-orange-600' },
-		'GC=F': { iconColor: 'text-white', iconBgColor: 'bg-yellow-500' },
+	// Base icon color berdasarkan symbol (untuk identitas)
+	const baseColors: Record<string, { iconColor: string; baseBgColor?: string }> = {
+		'^JKSE': { iconColor: 'text-white' }, // IDX Composite - warna mengikuti changeType
+		'IDR=X': { iconColor: 'text-white' }, // USD/IDR - warna mengikuti changeType
+		'BTC-USD': { iconColor: 'text-white', baseBgColor: 'bg-orange-600' }, // Bitcoin - tetap orange
+		'GC=F': { iconColor: 'text-white', baseBgColor: 'bg-yellow-500' }, // Gold - tetap yellow
 	};
 	
-	return configs[symbol] || { 
-		iconColor: changeType === 'positive' ? 'text-white' : 'text-white', 
-		iconBgColor: changeType === 'positive' ? 'bg-green-600' : 'bg-red-600' 
+	const baseConfig = baseColors[symbol] || { iconColor: 'text-white' };
+	
+	// Jika ada baseBgColor, gunakan itu. Jika tidak, gunakan changeType
+	const iconBgColor = baseConfig.baseBgColor 
+		? baseConfig.baseBgColor 
+		: (changeType === 'positive' ? 'bg-green-600' : 'bg-red-600');
+	
+	return {
+		iconColor: baseConfig.iconColor,
+		iconBgColor: iconBgColor,
 	};
 }
 ---
